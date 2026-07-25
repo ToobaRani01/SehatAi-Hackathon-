@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Pneumonia AI Analysis - SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#2563eb', secondary: '#475569',
+                        success: '#22c55e', warning: '#f59e0b',
+                        danger: '#ef4444', background: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f8fafc; color: #1e293b; }
+        .sidebar-item-active { background-color: #eff6ff; color: #2563eb; border-right: 4px solid #2563eb; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .active-icon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+        /* Custom searchable dropdown */
+        .patient-dropdown-container { position: relative; }
+        .patient-dropdown-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid #e2e8f0;
+            border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+            max-height: 280px; overflow-y: auto; z-index: 50;
+            display: none; margin-top: 4px;
+        }
+        .patient-dropdown-list.open { display: block; }
+        .patient-dropdown-item {
+            padding: 12px 16px; cursor: pointer;
+            display: flex; align-items: center; gap: 12px;
+            transition: background 0.15s;
+        }
+        .patient-dropdown-item:hover { background: #f1f5f9; }
+        .patient-dropdown-item:first-child { border-radius: 12px 12px 0 0; }
+        .patient-dropdown-item:last-child { border-radius: 0 0 12px 12px; }
+        .patient-dropdown-item.selected { background: #eff6ff; }
+        .patient-dropdown-list::-webkit-scrollbar { width: 6px; }
+        .patient-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+        .patient-dropdown-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .patient-chip {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #eff6ff; border: 1px solid #bfdbfe;
+            padding: 8px 14px; border-radius: 12px;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-full z-20">
+        <div class="p-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-xl active-icon">medical_services</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">grid_view</span> Dashboard
+            </a>
+            <a href="patients.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">group</span> Patients
+            </a>
+            <a href="diagnostics.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg sidebar-item-active">
+                <span class="material-symbols-outlined active-icon">stethoscope</span> Diagnostics
+            </a>
+            <a href="history.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">history</span> History
+            </a>
+            <a href="medical_reports.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">description</span> AI Reports
+            </a>
+            <a href="profile.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">person</span> Profile
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-100">
+            <a href="#" onclick="doLogout()" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors">
+                <span class="material-symbols-outlined">logout</span> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64 p-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center gap-2 text-sm text-slate-400 font-semibold mb-2">
+                <a href="diagnostics.html" class="hover:text-blue-600 transition-colors">Diagnostics</a>
+                <span class="material-symbols-outlined text-base">chevron_right</span>
+                <span class="text-slate-600">Pneumonia Detection</span>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800">Pneumonia Detection</h2>
+            <p class="text-slate-500 font-medium">Precision lung analysis powered by deep learning.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left: Upload Section -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                    <form id="pneumonia-form" class="space-y-6">
+
+                        <!-- Patient Selection Dropdown with Search -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                                Select Patient <span class="text-red-400">*</span>
+                            </label>
+                            <div class="patient-dropdown-container">
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
+                                        <span class="material-symbols-outlined text-xl">search</span>
+                                    </span>
+                                    <input id="patient-search" type="text" autocomplete="off"
+                                           placeholder="Search by name, ID, or contact..."
+                                           class="w-full pl-11 pr-4 py-3.5 bg-white border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm">
+                                </div>
+                                <div id="patient-dropdown" class="patient-dropdown-list">
+                                    <!-- Dynamic patient list -->
+                                </div>
+                            </div>
+
+                            <!-- Selected patient chip (shown after selection) -->
+                            <div id="selected-patient-info" class="hidden mt-3">
+                                <div class="patient-chip">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs" id="sel-initials">--</div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-800" id="sel-name">—</p>
+                                        <p class="text-xs text-slate-500" id="sel-details">—</p>
+                                    </div>
+                                    <button type="button" onclick="clearSelection()" class="ml-auto text-slate-400 hover:text-red-500 transition-colors">
+                                        <span class="material-symbols-outlined text-lg">close</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- No patients message -->
+                            <p id="no-patients-msg" class="hidden text-sm text-amber-600 font-medium mt-2">
+                                <span class="material-symbols-outlined text-base align-middle mr-1">info</span>
+                                No patients found. <a href="add_patient.html" class="text-blue-600 hover:underline font-bold">Register a patient first</a>.
+                            </p>
+                        </div>
+
+                        <!-- Hidden fields to store selected patient data -->
+                        <input type="hidden" id="selected-patient-id">
+                        <input type="hidden" id="selected-patient-name">
+                        <input type="hidden" id="selected-patient-age">
+
+                        <!-- X-Ray Upload -->
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Chest X-Ray Upload <span class="text-red-400">*</span></label>
+                            <label for="xray-file" class="group relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 hover:bg-slate-100 hover:border-blue-400 transition-all cursor-pointer overflow-hidden">
+                                <div id="preview-placeholder" class="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <div class="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+                                        <span class="material-symbols-outlined text-3xl">cloud_upload</span>
+                                    </div>
+                                    <p class="mb-1 text-sm font-bold text-slate-700">Drop files here or click to browse</p>
+                                    <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold">DICOM, PNG, JPG accepted</p>
+                                </div>
+                                <img id="image-preview" class="hidden absolute inset-0 w-full h-full object-contain p-4" alt="X-ray Preview">
+                                <input id="xray-file" class="hidden" type="file" accept="image/*" />
+                            </label>
+                        </div>
+
+                        <button id="analyze-btn" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-200 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                            <span>Analyze Image</span>
+                            <span class="material-symbols-outlined">analytics</span>
+                        </button>
+                    </form>
+                </div>
+                
+                <div id="upload-status" class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 font-medium text-center hidden">
+                    No image uploaded yet.
+                </div>
+            </div>
+
+            <!-- Right: Results Panel -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-8">
+                        <h4 class="text-lg font-bold text-slate-800">Diagnostic Result</h4>
+                        <div class="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400">
+                            <span class="material-symbols-outlined active-icon">verified</span>
+                        </div>
+                    </div>
+
+                    <div id="result-container" class="flex-1 flex flex-col justify-center items-center text-center py-12">
+                        <div id="result-status-icon" class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-6">
+                            <span class="material-symbols-outlined text-4xl">hourglass_empty</span>
+                        </div>
+                        <h5 id="prediction-label" class="text-2xl font-extrabold text-slate-400 mb-2">Awaiting Input</h5>
+                        <p id="prediction-note" class="text-slate-500 text-sm font-medium leading-relaxed">
+                            Select a patient and upload a scan to generate prediction.
+                        </p>
+                    </div>
+
+                    <div class="mt-auto pt-8 border-t border-slate-100">
+                        <div class="flex justify-between items-end mb-3">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Confidence Level</span>
+                            <span id="prediction-score" class="text-xl font-bold text-slate-800 tracking-tighter">0.0%</span>
+                        </div>
+                        <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div id="prediction-bar" class="h-full bg-blue-600 w-0 rounded-full transition-all duration-1000"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ── STATE ──────────────────────────────────────────────────────────────
+        let allPatients = [];
+        let selectedPatient = null;
+        let dropdownOpen = false;
+
+        // ── DOM REFERENCES ────────────────────────────────────────────────────
+        const searchInput = document.getElementById('patient-search');
+        const dropdown = document.getElementById('patient-dropdown');
+        const selectedInfo = document.getElementById('selected-patient-info');
+        const noMsg = document.getElementById('no-patients-msg');
+        const form = document.getElementById('pneumonia-form');
+        const inputFile = document.getElementById('xray-file');
+        const imagePreview = document.getElementById('image-preview');
+        const previewPlaceholder = document.getElementById('preview-placeholder');
+        const predLabel = document.getElementById('prediction-label');
+        const predNote = document.getElementById('prediction-note');
+        const predScore = document.getElementById('prediction-score');
+        const predBar = document.getElementById('prediction-bar');
+        const statusBox = document.getElementById('upload-status');
+        const statusIcon = document.getElementById('result-status-icon');
+
+        // ── LOAD PATIENTS FROM API ────────────────────────────────────────────
+        async function loadPatients() {
+            try {
+                const res = await fetch('/api/patients');
+                const data = await res.json();
+                allPatients = data.patients || [];
+                if (allPatients.length === 0) {
+                    noMsg.classList.remove('hidden');
+                }
+
+                // Check for URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const pId = urlParams.get('patient_id');
+                const dType = urlParams.get('type') || 'pneumonia';
+
+                if (pId) {
+                    const patient = allPatients.find(p => p.id == pId);
+                    if (patient) {
+                        selectPatient(patient);
+                    }
+                }
+
+                // Update type display if needed
+                if (dType !== 'pneumonia') {
+                    document.querySelector('h2').textContent = `AI ${dType.charAt(0).toUpperCase() + dType.slice(1)} Analysis`;
+                }
+
+            } catch (err) {
+                console.error('Failed to load patients:', err);
+            }
+        }
+        loadPatients();
+
+        // ── SEARCHABLE DROPDOWN LOGIC ─────────────────────────────────────────
+        function renderDropdown(query = '') {
+            const q = query.toLowerCase();
+            const filtered = allPatients.filter(p =>
+                p.full_name.toLowerCase().includes(q) ||
+                p.patient_id.toLowerCase().includes(q) ||
+                (p.contact && p.contact.toLowerCase().includes(q))
+            );
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `
+                    <div class="px-4 py-6 text-center text-slate-400 text-sm font-medium">
+                        <span class="material-symbols-outlined text-2xl block mb-1">person_off</span>
+                        No matching patients
+                    </div>`;
+            } else {
+                dropdown.innerHTML = filtered.map(p => {
+                    const initials = p.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    const isSelected = selectedPatient && selectedPatient.id === p.id;
+                    return `
+                        <div class="patient-dropdown-item ${isSelected ? 'selected' : ''}" data-id="${p.id}">
+                            <div class="w-9 h-9 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs flex-shrink-0">${initials}</div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-slate-700 truncate">${p.full_name}</p>
+                                <p class="text-xs text-slate-400">${p.patient_id} • Age ${p.age} • ${p.gender}</p>
+                            </div>
+                            ${isSelected ? '<span class="material-symbols-outlined text-blue-600 text-lg">check_circle</span>' : ''}
+                        </div>`;
+                }).join('');
+            }
+
+            dropdown.classList.add('open');
+            dropdownOpen = true;
+
+            // Attach click handlers
+            dropdown.querySelectorAll('.patient-dropdown-item[data-id]').forEach(item => {
+                item.addEventListener('click', () => {
+                    const pid = parseInt(item.dataset.id);
+                    const p = allPatients.find(pt => pt.id == pid);
+                    if (p) selectPatient(p);
+                });
+            });
+        }
+
+        function selectPatient(p) {
+            selectedPatient = p;
+            const initials = p.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+            document.getElementById('sel-initials').textContent = initials;
+            document.getElementById('sel-name').textContent = p.full_name;
+            document.getElementById('sel-details').textContent = `${p.patient_id} • Age ${p.age} • ${p.gender}`;
+
+            document.getElementById('selected-patient-id').value = p.id;
+            document.getElementById('selected-patient-name').value = p.full_name;
+            document.getElementById('selected-patient-age').value = p.age;
+
+            selectedInfo.classList.remove('hidden');
+            searchInput.value = '';
+            searchInput.placeholder = 'Patient selected ✓';
+            closeDropdown();
+            noMsg.classList.add('hidden');
+        }
+
+        function clearSelection() {
+            selectedPatient = null;
+            document.getElementById('selected-patient-id').value = '';
+            document.getElementById('selected-patient-name').value = '';
+            document.getElementById('selected-patient-age').value = '';
+            selectedInfo.classList.add('hidden');
+            searchInput.placeholder = 'Search by name, ID, or contact...';
+        }
+
+        function closeDropdown() {
+            dropdown.classList.remove('open');
+            dropdownOpen = false;
+        }
+
+        // Search input events
+        searchInput.addEventListener('focus', () => renderDropdown(searchInput.value));
+        searchInput.addEventListener('input', () => renderDropdown(searchInput.value));
+
+        // Close dropdown on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.patient-dropdown-container')) {
+                closeDropdown();
+            }
+        });
+
+        // ── IMAGE PREVIEW ─────────────────────────────────────────────────────
+        inputFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    imagePreview.src = event.target.result;
+                    imagePreview.classList.remove('hidden');
+                    previewPlaceholder.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+                statusBox.textContent = `File ready: ${file.name}`;
+                statusBox.classList.remove('hidden');
+            }
+        });
+
+        // ── FORM SUBMISSION ───────────────────────────────────────────────────
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validate patient selection
+            if (!selectedPatient) {
+                alert('Please select a patient from the dropdown.');
+                searchInput.focus();
+                return;
+            }
+
+            const name = selectedPatient.full_name;
+
+            if (!inputFile.files.length) {
+                alert('Please upload a chest X-ray image.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', inputFile.files[0]);
+            formData.append('patient_db_id', selectedPatient.id);
+            formData.append('patient_name', selectedPatient.full_name);
+            formData.append('patient_pid', selectedPatient.patient_id);
+
+            // Loading state
+            predLabel.textContent = 'Processing...';
+            predLabel.className = 'text-2xl font-extrabold text-blue-600 mb-2';
+            statusIcon.className = 'w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mb-6 animate-pulse';
+            statusIcon.innerHTML = '<span class="material-symbols-outlined text-4xl">analytics</span>';
+            predNote.textContent = 'Analyzing radiographic patterns...';
+            predScore.textContent = '0.0%';
+            predBar.style.width = '0%';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Server error');
+
+                const result = data.prediction;
+                const score = Number(data.score || 0);
+                const percent = (score * 100).toFixed(1);
+
+                if (result === 'pneumonia') {
+                    statusIcon.className = 'w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-6 scale-110 transition-transform';
+                    statusIcon.innerHTML = '<span class="material-symbols-outlined text-4xl">warning</span>';
+                    predLabel.textContent = 'Pneumonia Detected';
+                    predLabel.className = 'text-2xl font-extrabold text-red-600 mb-2';
+                    predNote.textContent = `Diagnosis for ${name} suggests clinical pneumonia. Immediate medical consultation is required.`;
+                    predBar.className = 'h-full bg-red-500 w-0 rounded-full transition-all duration-1000';
+                } else {
+                    statusIcon.className = 'w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mb-6 scale-110 transition-transform';
+                    statusIcon.innerHTML = '<span class="material-symbols-outlined text-4xl">check_circle</span>';
+                    predLabel.textContent = 'Normal Scan';
+                    predLabel.className = 'text-2xl font-extrabold text-emerald-600 mb-2';
+                    predNote.textContent = `Patient ${name}'s scan shows no clear indicators of pneumonia. Regular follow-up recommended.`;
+                    predBar.className = 'h-full bg-emerald-500 w-0 rounded-full transition-all duration-1000';
+                }
+
+                predScore.textContent = `${percent}%`;
+                setTimeout(() => { predBar.style.width = `${percent}%`; }, 100);
+
+            } catch (err) {
+                console.error(err);
+                statusIcon.className = 'w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-600 mb-6';
+                statusIcon.innerHTML = '<span class="material-symbols-outlined text-4xl">error</span>';
+                predLabel.textContent = 'Analysis Failed';
+                predLabel.className = 'text-2xl font-extrabold text-amber-600 mb-2';
+                predNote.textContent = `Error: ${err.message}`;
+            }
+        });
+
+        function doLogout() {
+            fetch('/api/logout', { method: 'POST' })
+                .then(() => { window.location.href = '/'; })
+                .catch(() => { window.location.href = '/'; });
+        }
+    </script>
+</body>
+</html>

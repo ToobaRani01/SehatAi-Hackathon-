@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Doctor Profile Management - SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .sidebar-item-active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-right: 4px solid #2563eb;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .active-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Profile Card Styles */
+        .profile-card {
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #f1f5f9;
+            transition: all 0.3s;
+        }
+
+        .avatar-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: pointer;
+            color: white;
+        }
+
+        .avatar-container:hover .avatar-overlay {
+            opacity: 1;
+        }
+
+        .camera-badge {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 44px;
+            height: 44px;
+            background: #2563eb;
+            border: 4px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            width: 160px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .info-value {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .edit-btn {
+            color: #94a3b8;
+            transition: color 0.2s;
+        }
+
+        .edit-btn:hover {
+            color: #2563eb;
+        }
+
+        .profile-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .profile-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+    </style>
+</head>
+
+<body class="flex min-h-screen">
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+            <h3 class="text-xl font-bold text-slate-800 mb-6">Change Password</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Current Password</label>
+                    <input type="password" id="curr-pw" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-blue-500/20">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">New Password</label>
+                    <input type="password" id="new-pw" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-blue-500/20">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Confirm New Password</label>
+                    <input type="password" id="new-pw-confirm" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-blue-500/20">
+                </div>
+            </div>
+            <div class="flex gap-3 mt-8">
+                <button onclick="saveNewPassword()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95">Update Password</button>
+                <button onclick="closePasswordModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl transition-all">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-full z-20">
+        <div class="p-8 flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                <span class="material-symbols-outlined text-xl active-icon">shield_with_house</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">grid_view</span> Dashboard
+            </a>
+            <a href="patients.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">group</span> Patients
+            </a>
+            <a href="diagnostics.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">stethoscope</span> Diagnostics
+            </a>
+            <a href="history.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">history</span> History
+            </a>
+            <a href="medical_reports.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">description</span> AI Reports
+            </a>
+            <a href="profile.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg sidebar-item-active shadow-sm shadow-blue-50">
+                <span class="material-symbols-outlined active-icon">person</span> Profile
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-50">
+            <a href="#" onclick="doLogout()" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:text-red-500 transition-colors">
+                <span class="material-symbols-outlined">logout</span> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64 p-12">
+        <header class="mb-10">
+            <h2 class="text-3xl font-black text-slate-900 tracking-tight">Doctor Profile & Account Settings</h2>
+            <p class="text-slate-400 font-medium mt-1">Manage your clinical identity and account security.</p>
+        </header>
+
+        <div class="profile-card flex bg-white p-12 gap-16">
+            <!-- Left Side: Avatar -->
+            <div class="w-[300px] flex flex-col items-center">
+                <div class="avatar-container group" onclick="triggerUpload()">
+                    <img id="profile-avatar" src="https://ui-avatars.com/api/?name=Doctor&background=2563eb&color=fff&size=256" alt="Avatar" class="avatar-img shadow-2xl">
+                    <div class="avatar-overlay">
+                        <span class="material-symbols-outlined text-4xl mb-2">photo_camera</span>
+                        <span class="text-sm font-bold">Edit Photo</span>
+                    </div>
+                    <div class="camera-badge">
+                        <span class="material-symbols-outlined text-xl">camera</span>
+                    </div>
+                    <input type="file" id="avatar-input" class="hidden" accept="image/*" onchange="uploadAvatar(this)">
+                </div>
+
+                <div class="mt-8 flex gap-3 w-full max-w-[200px]">
+                    <button onclick="triggerUpload()" class="flex-1 bg-blue-50 text-blue-600 font-bold py-2.5 rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm border border-blue-100">Upload</button>
+                    <button onclick="deleteAvatar()" class="flex-1 bg-white text-slate-400 font-bold py-2.5 rounded-xl hover:bg-red-50 hover:text-red-500 transition-all text-sm border border-slate-200">Delete</button>
+                </div>
+
+                <div class="mt-8 text-center">
+                    <h3 id="profile-name-display" class="text-2xl font-black text-slate-800 tracking-tight">Dr. Loading...</h3>
+                    <p class="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Certified Medical Practitioner</p>
+                </div>
+            </div>
+
+            <!-- Right Side: Details -->
+            <div class="flex-1 space-y-10">
+                
+                <!-- Account Info Section -->
+                <div>
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">badge</span> Account Information
+                    </h4>
+                    <div class="space-y-1">
+                        <!-- Full Name -->
+                        <div class="info-row">
+                            <span class="info-label">Full Name</span>
+                            <div class="info-value flex items-center group">
+                                <span id="val-full_name">...</span>
+                                <input id="edit-full_name" type="text" class="profile-input hidden">
+                                <button onclick="toggleField('full_name')" class="edit-btn ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span id="icon-full_name" class="material-symbols-outlined text-[20px]">edit_square</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Email -->
+                        <div class="info-row">
+                            <span class="info-label">Email Address</span>
+                            <div class="info-value text-slate-400 italic" id="val-email">...</div>
+                        </div>
+                        <!-- Password -->
+                        <div class="info-row">
+                            <span class="info-label">Password</span>
+                            <div class="info-value flex items-center">
+                                <span>[ ****** ]</span>
+                                <button onclick="openPasswordModal()" class="ml-auto text-sm font-bold text-blue-600 hover:underline">Change Password</button>
+                            </div>
+                        </div>
+                        <!-- Mobile -->
+                        <div class="info-row">
+                            <span class="info-label">Mobile Number</span>
+                            <div class="info-value flex items-center group">
+                                <span id="val-mobile_number">+91 XXXX XXXX</span>
+                                <input id="edit-mobile_number" type="text" class="profile-input hidden">
+                                <button onclick="toggleField('mobile_number')" class="edit-btn ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span id="icon-mobile_number" class="material-symbols-outlined text-[20px]">edit_square</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Professional Details Section -->
+                <div>
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">clinical_notes</span> Professional Details
+                    </h4>
+                    <div class="space-y-1">
+                        <!-- Specialization -->
+                        <div class="info-row">
+                            <span class="info-label">Specialization</span>
+                            <div class="info-value flex items-center group">
+                                <span id="val-specialization">...</span>
+                                <input id="edit-specialization" type="text" class="profile-input hidden">
+                                <button onclick="toggleField('specialization')" class="edit-btn ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span id="icon-specialization" class="material-symbols-outlined text-[20px]">edit_square</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Clinic Name -->
+                        <div class="info-row">
+                            <span class="info-label">Clinic Name</span>
+                            <div class="info-value flex items-center group">
+                                <span id="val-clinic_name">...</span>
+                                <input id="edit-clinic_name" type="text" class="profile-input hidden">
+                                <button onclick="toggleField('clinic_name')" class="edit-btn ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span id="icon-clinic_name" class="material-symbols-outlined text-[20px]">edit_square</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- License -->
+                        <div class="info-row">
+                            <span class="info-label">License Number</span>
+                            <div class="info-value flex items-center group">
+                                <span id="val-license_number">...</span>
+                                <input id="edit-license_number" type="text" class="profile-input hidden">
+                                <button onclick="toggleField('license_number')" class="edit-btn ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span id="icon-license_number" class="material-symbols-outlined text-[20px]">edit_square</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let userData = {};
+        let editingFields = new Set();
+
+        async function fetchProfile() {
+            try {
+                const res = await fetch('/api/me');
+                if (!res.ok) throw new Error('Not logged in');
+                const data = await res.json();
+                userData = data.user;
+                updateUI();
+            } catch (err) {
+                window.location.href = '/';
+            }
+        }
+
+        function updateUI() {
+            // Avatar
+            if (userData.avatar_url) {
+                document.getElementById('profile-avatar').src = userData.avatar_url;
+            } else {
+                document.getElementById('profile-avatar').src = `https://ui-avatars.com/api/?name=${userData.full_name}&background=2563eb&color=fff&size=256`;
+            }
+
+            // Names
+            document.getElementById('profile-name-display').textContent = userData.full_name.startsWith('Dr.') ? userData.full_name : 'Dr. ' + userData.full_name;
+            
+            // Values
+            const fields = ['full_name', 'email', 'mobile_number', 'specialization', 'clinic_name', 'license_number'];
+            fields.forEach(f => {
+                const el = document.getElementById('val-' + f);
+                if (el) el.textContent = userData[f] || (f === 'email' ? '—' : 'Not Provided');
+            });
+        }
+
+        function toggleField(field) {
+            const valEl = document.getElementById('val-' + field);
+            const inputEl = document.getElementById('edit-' + field);
+            const iconEl = document.getElementById('icon-' + field);
+
+            if (editingFields.has(field)) {
+                // SAVE ACTION
+                saveProfileChanges(field);
+            } else {
+                // EDIT MODE
+                editingFields.add(field);
+                valEl.classList.add('hidden');
+                inputEl.classList.remove('hidden');
+                inputEl.value = userData[field] || '';
+                inputEl.focus();
+                iconEl.textContent = 'check';
+                iconEl.classList.add('text-blue-600');
+            }
+        }
+
+        async function saveProfileChanges(field = null) {
+            // Gather all current values from either inputs or userData
+            const payload = {
+                full_name: editingFields.has('full_name') ? document.getElementById('edit-full_name').value : userData.full_name,
+                mobile_number: editingFields.has('mobile_number') ? document.getElementById('edit-mobile_number').value : userData.mobile_number,
+                specialization: editingFields.has('specialization') ? document.getElementById('edit-specialization').value : userData.specialization,
+                clinic_name: editingFields.has('clinic_name') ? document.getElementById('edit-clinic_name').value : userData.clinic_name,
+                license_number: editingFields.has('license_number') ? document.getElementById('edit-license_number').value : userData.license_number
+            };
+
+            try {
+                const res = await fetch('/api/me/update', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    if (field) {
+                        editingFields.delete(field);
+                        document.getElementById('val-' + field).classList.remove('hidden');
+                        document.getElementById('edit-' + field).classList.add('hidden');
+                        document.getElementById('icon-' + field).textContent = 'edit';
+                        document.getElementById('icon-' + field).classList.remove('text-blue-600');
+                    }
+                    fetchProfile();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Update failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error');
+            }
+        }
+
+        // --- Avatar Management ---
+        function triggerUpload() { document.getElementById('avatar-input').click(); }
+
+        async function uploadAvatar(input) {
+            if (!input.files || !input.files[0]) return;
+            const formData = new FormData();
+            formData.append('avatar', input.files[0]);
+
+            try {
+                const res = await fetch('/api/me/avatar', { method: 'POST', body: formData });
+                if (res.ok) fetchProfile();
+                else alert('Upload failed');
+            } catch (err) { console.error(err); }
+        }
+
+        async function deleteAvatar() {
+            if (!confirm('Revert to system default avatar?')) return;
+            try {
+                const res = await fetch('/api/me/avatar', { method: 'DELETE' });
+                if (res.ok) fetchProfile();
+            } catch (err) { console.error(err); }
+        }
+
+        // --- Password Management ---
+        function openPasswordModal() { document.getElementById('password-modal').classList.add('open'); }
+        function closePasswordModal() { document.getElementById('password-modal').classList.remove('open'); }
+
+        async function saveNewPassword() {
+            const curr = document.getElementById('curr-pw').value;
+            const np = document.getElementById('new-pw').value;
+            const npc = document.getElementById('new-pw-confirm').value;
+
+            if (np !== npc) return alert('New passwords do not match');
+
+            try {
+                const res = await fetch('/api/me/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: curr, new_password: np })
+                });
+                if (res.ok) {
+                    alert('Password updated successfully');
+                    closePasswordModal();
+                } else {
+                    const err = await res.json();
+                    alert(err.error);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function doLogout() {
+            fetch('/api/logout', { method: 'POST' }).then(() => window.location.href = '/');
+        }
+
+        fetchProfile();
+    </script>
+</body>
+
+</html>

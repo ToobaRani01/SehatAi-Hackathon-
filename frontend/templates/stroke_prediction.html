@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Stroke Risk Analysis | SehatAi Clinical Insights</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#475569',
+                        success: '#22c55e',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        background: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .sidebar-item-active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-right: 4px solid #2563eb;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+
+        .active-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .stat-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes fillGauge {
+            from {
+                stroke-dasharray: 0, 100;
+            }
+
+            to {
+                stroke-dasharray: var(--percent), 100;
+            }
+        }
+
+        .gauge-path {
+            transition: stroke-dasharray 1s ease-out;
+        }
+
+        /* Custom searchable dropdown */
+        .patient-dropdown-container { position: relative; }
+        .patient-dropdown-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid #e2e8f0;
+            border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+            max-height: 280px; overflow-y: auto; z-index: 50;
+            display: none; margin-top: 4px;
+        }
+        .patient-dropdown-list.open { display: block; }
+        .patient-dropdown-item {
+            padding: 12px 16px; cursor: pointer;
+            display: flex; align-items: center; gap: 12px;
+            transition: background 0.15s;
+        }
+        .patient-dropdown-item:hover { background: #f1f5f9; }
+        .patient-dropdown-item:first-child { border-radius: 12px 12px 0 0; }
+        .patient-dropdown-item:last-child { border-radius: 0 0 12px 12px; }
+        .patient-dropdown-item.selected { background: #eff6ff; }
+        .patient-dropdown-list::-webkit-scrollbar { width: 6px; }
+        .patient-dropdown-list::-webkit-scrollbar-track { background: transparent; }
+        .patient-dropdown-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .patient-chip {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #eff6ff; border: 1px solid #bfdbfe;
+            padding: 8px 14px; border-radius: 12px;
+        }
+    </style>
+</head>
+
+<body class="flex min-h-screen font-sans antialiased no-scrollbar">
+    <!-- Sidebar Navigation (Matching Project) -->
+    <aside class="w-64 bg-white border-r border-slate-100 flex flex-col fixed h-full z-10 hidden lg:flex">
+        <div class="p-8 pb-10 flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-lg active-icon">shield_with_house</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="dashboard.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">grid_view</span> Dashboard
+            </a>
+            <a href="patients.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">group</span> Patients
+            </a>
+            <a href="diagnostics.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg sidebar-item-active">
+                <span class="material-symbols-outlined active-icon">stethoscope</span> Diagnostics
+            </a>
+            <a href="history.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">history</span> History
+            </a>
+            <a href="medical_reports.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">description</span> AI Reports
+            </a>
+            <a href="profile.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">person</span> Profile
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-50">
+            <a href="#" onclick="doLogout()"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors">
+                <span class="material-symbols-outlined">logout</span> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 lg:ml-64 p-8 lg:p-12 min-h-screen">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header Section -->
+            <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <p class="text-blue-600 font-bold text-xs uppercase tracking-widest mb-1">Neurological Suite</p>
+                    <h2 class="text-3xl font-black text-slate-900 tracking-tight">Stroke Risk Prediction</h2>
+                    <p class="text-slate-400 font-medium mt-1">Multi-parametric AI assessment for early detection.</p>
+                </div>
+                <div class="flex flex-col gap-3 min-w-[320px]">
+                    <div class="patient-dropdown-container">
+                        <div class="relative group">
+                            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                                <span class="material-symbols-outlined text-xl">search</span>
+                            </span>
+                            <input id="patient-search" type="text" autocomplete="off"
+                                   placeholder="Search patient by name or ID..."
+                                   class="w-full pl-11 pr-4 py-3 bg-white border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm shadow-sm">
+                        </div>
+                        <div id="patient-dropdown" class="patient-dropdown-list">
+                            <!-- Dynamic list -->
+                        </div>
+                    </div>
+                    
+                    <div id="selected-patient-chip" class="hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div class="patient-chip border shadow-sm">
+                            <div id="patient-avatar-chip" class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-[10px]">--</div>
+                            <div class="flex-1">
+                                <p id="sel-name" class="text-xs font-black text-slate-800">—</p>
+                                <p id="sel-pid" class="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">—</p>
+                            </div>
+                            <button onclick="clearSelection()" class="text-slate-400 hover:text-red-500 transition-colors ml-2">
+                                <span class="material-symbols-outlined text-lg">close</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                <!-- Left: Form -->
+                <div class="xl:col-span-8 space-y-8">
+                    <!-- Educational Banner -->
+                    <div
+                        class="bg-blue-600 rounded-3xl p-8 text-white relative overflow-hidden group shadow-xl shadow-blue-100">
+                        <div class="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold mb-2">Clinical Protocol: FAST</h3>
+                                <p class="text-blue-100 text-sm leading-relaxed">
+                                    Face drooping, Arm weakness, Speech difficulty, Time to call emergency. Early
+                                    prediction helps mitigate permanent neurological deficit.
+                                </p>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/20">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="material-symbols-outlined text-sm">schedule</span>
+                                    <span class="text-xs font-bold uppercase tracking-wider">Golden Period</span>
+                                </div>
+                                <p class="text-2xl font-black">4.5 Hours</p>
+                            </div>
+                        </div>
+                        <div
+                            class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform">
+                        </div>
+                    </div>
+
+                    <!-- Input Parameters (Ordered as per Model) -->
+                    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100 overflow-hidden">
+                        <div class="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                            <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-blue-600">clinical_notes</span>
+                                Patient Diagnostic Profile
+                            </h4>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Model Interface v2.0.4</span>
+                        </div>
+                        <div class="p-8 space-y-10">
+                            <!-- 1. Gender & 2. Age -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">1. Gender</label>
+                                    <select id="gender" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="Male">Male</option>
+                                        <option value="Female" selected>Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">2. Age (Years)</label>
+                                    <input id="age" type="number" value="67" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                </div>
+                            </div>
+
+                            <!-- 3. Hypertension & 4. Heart Disease -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">3. Hypertension</label>
+                                    <select id="hypertension" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="1">Yes (History of high BP)</option>
+                                        <option value="0" selected>No</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">4. Heart Disease</label>
+                                    <select id="heart_disease" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="1">Yes (Known cardiac conditions)</option>
+                                        <option value="0" selected>No</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 5. Ever Married & 6. Work Type -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">5. Ever Married</label>
+                                    <select id="ever_married" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="Yes" selected>Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">6. Work Type</label>
+                                    <select id="work_type" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="Private" selected>Private</option>
+                                        <option value="Self-employed">Self-employed</option>
+                                        <option value="Govt_job">Govt_job</option>
+                                        <option value="children">Children</option>
+                                        <option value="Never_worked">Never_worked</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 7. Residence Type & 8. Avg Glucose Level -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">7. Residence Type</label>
+                                    <select id="residence_type" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="Urban" selected>Urban</option>
+                                        <option value="Rural">Rural</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">8. Avg Glucose Level</label>
+                                    <input id="avg_glucose_level" type="number" step="0.01" value="228.67" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                </div>
+                            </div>
+
+                            <!-- 9. BMI & 10. Smoking Status -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">9. BMI (Body Mass Index)</label>
+                                    <input id="bmi" type="number" step="0.1" value="36.6" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">10. Smoking Status</label>
+                                    <select id="smoking_status" class="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all">
+                                        <option value="formerly smoked">Formerly Smoked</option>
+                                        <option value="never smoked" selected>Never Smoked</option>
+                                        <option value="smokes">Smokes</option>
+                                        <option value="Unknown">Unknown</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Action Button -->
+                            <div class="pt-6 flex justify-end">
+                                <button id="run-inference-btn" onclick="runInference()" class="bg-blue-600 hover:bg-blue-700 text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all active:scale-95 flex items-center gap-3">
+                                    <span class="material-symbols-outlined">bolt</span>
+                                    Run Risk Assessment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Results -->
+                <div class="xl:col-span-4 space-y-8">
+                    <!-- Result Card -->
+                    <div id="result-card" class="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-100 overflow-hidden hidden">
+                        <div class="p-8 text-center border-b border-slate-50">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">AI Inferred Result</p>
+                            
+                            <!-- Gauge -->
+                            <div class="relative w-48 h-48 mx-auto mb-8">
+                                <svg class="w-full h-full -rotate-90" viewbox="0 0 36 36">
+                                    <path class="stroke-slate-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"></path>
+                                    <path id="gauge-path" class="gauge-path stroke-blue-600" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round"></path>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span id="confidence-pct" class="text-4xl font-black text-slate-800">0%</span>
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase">Risk Score</span>
+                                </div>
+                            </div>
+
+                            <div id="status-badge" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full mb-4">
+                                <span id="status-icon" class="material-symbols-outlined text-lg">info</span>
+                                <span id="status-text" class="text-xs font-black uppercase tracking-wider">Analyzing...</span>
+                            </div>
+
+                            <!-- Biometric Metrics Breakdown -->
+                            <div class="grid grid-cols-2 gap-4 mt-8 px-4">
+                                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Avg Glucose</p>
+                                    <h6 id="glucose-stat" class="text-lg font-black text-slate-800">--</h6>
+                                    <p id="glucose-desc" class="text-[10px] font-bold text-slate-400 uppercase">Awaiting Data</p>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">BMI Score</p>
+                                    <h6 id="bmi-stat" class="text-lg font-black text-slate-800">--</h6>
+                                    <p id="bmi-desc" class="text-[10px] font-bold text-slate-400 uppercase">Awaiting Data</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clinical Guidance -->
+                        <div class="p-8 bg-slate-50/50">
+                            <h4 class="font-bold text-slate-800 mb-6 flex items-center gap-2 text-sm">
+                                <span class="material-symbols-outlined text-blue-600">health_and_safety</span>
+                                Recommended Actions
+                            </h4>
+                            <div id="advice-list" class="space-y-4">
+                                <!-- JS Populated -->
+                            </div>
+                            <button onclick="window.print()" class="w-full mt-8 py-3.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2 shadow-sm">
+                                <span class="material-symbols-outlined text-lg">download</span>
+                                Download Patient Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder Results -->
+                    <div id="result-placeholder" class="bg-white rounded-[2rem] border-2 border-dashed border-slate-200 p-12 text-center">
+                        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                            <span class="material-symbols-outlined text-4xl">pending_actions</span>
+                        </div>
+                        <h5 class="text-slate-500 font-bold mb-2">Awaiting Parameters</h5>
+                        <p class="text-slate-400 text-xs leading-relaxed font-medium">Input biometric data on the left to see AI analysis.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script type="text/javascript">
+(function() {
+let currentPatient = null;
+let allPatients = [];
+let dropdownOpen = false;
+
+const searchInput = document.getElementById('patient-search');
+const dropdown = document.getElementById('patient-dropdown');
+const chip = document.getElementById('selected-patient-chip');
+
+// Fetch patients for dropdown
+async function fetchPatients() {
+    try {
+        dropdown.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs font-bold animate-pulse">Loading database...</div>';
+        const res = await fetch('/api/patients');
+        const data = await res.json();
+        allPatients = data.patients || [];
+        
+        if (allPatients.length === 0) {
+            dropdown.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs font-bold">No registered patients found. <a href="add_patient.html" class="text-blue-600 underline">Add one now</a>.</div>';
+        }
+
+        // Auto-select if ID in URL
+        const params = new URLSearchParams(window.location.search);
+        const pid = params.get('patient_id');
+        if (pid) {
+            const p = allPatients.find(x => x.id == pid);
+            if (p) selectPatient(p);
+        }
+    } catch (e) {
+        console.error('Error fetching patients:', e);
+    }
+}
+
+function renderDropdown(query = '') {
+    const q = query.toLowerCase();
+    const filtered = allPatients.filter(p =>
+        p.full_name.toLowerCase().includes(q) ||
+        p.patient_id.toLowerCase().includes(q) ||
+        (p.contact && p.contact.toLowerCase().includes(q))
+    );
+
+    if (filtered.length === 0) {
+        dropdown.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs font-bold">No results found. <a href="add_patient.html" class="text-blue-600 underline">New patient?</a></div>';
+    } else {
+        dropdown.innerHTML = filtered.map(p => {
+            const initials = p.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            return '<div class="patient-dropdown-item" data-id="' + p.id + '">' +
+                '<div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 font-bold text-[10px]">' + initials + '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                    '<p class="text-sm font-bold text-slate-800 truncate">' + p.full_name + '</p>' +
+                    '<p class="text-[10px] text-slate-400 font-bold">' + p.patient_id + ' • Age ' + p.age + '</p>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+
+        // Attach click handlers
+        dropdown.querySelectorAll('.patient-dropdown-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const pid = parseInt(item.dataset.id, 10);
+                selectPatientById(pid);
+            });
+        });
+    }
+    dropdown.classList.add('open');
+    dropdownOpen = true;
+}
+
+window.selectPatientById = (id) => {
+    const p = allPatients.find(x => x.id == id);
+    if (p) selectPatient(p);
+}
+
+function selectPatient(p) {
+    currentPatient = p;
+    document.getElementById('sel-name').textContent = p.full_name;
+    document.getElementById('sel-pid').textContent = p.patient_id;
+    document.getElementById('age').value = p.age;
+    document.getElementById('gender').value = p.gender;
+    
+    const initials = p.full_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+    document.getElementById('patient-avatar-chip').textContent = initials;
+    
+    chip.classList.remove('hidden');
+    searchInput.value = '';
+    searchInput.placeholder = p.full_name;
+    closeDropdown();
+}
+
+window.clearSelection = () => {
+    currentPatient = null;
+    chip.classList.add('hidden');
+    searchInput.placeholder = "Search patient by name or ID...";
+    searchInput.value = '';
+}
+
+function closeDropdown() {
+    dropdown.classList.remove('open');
+    dropdownOpen = false;
+}
+
+searchInput.addEventListener('focus', () => renderDropdown(searchInput.value));
+searchInput.addEventListener('input', () => renderDropdown(searchInput.value));
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.patient-dropdown-container')) closeDropdown();
+});
+
+// Initialize on load
+fetchPatients();
+
+window.runInference = async () => {
+    const btn = document.getElementById('run-inference-btn');
+    if (!currentPatient) {
+        alert('Please select a patient first.');
+        searchInput.focus();
+        return;
+    }
+    
+    btn.innerHTML = '<span class="animate-spin material-symbols-outlined">progress_activity</span> Processing...';
+    btn.disabled = true;
+
+    const payload = {
+        patient_db_id: currentPatient.id,
+        gender: document.getElementById('gender').value,
+        age: document.getElementById('age').value,
+        hypertension: document.getElementById('hypertension').value,
+        heart_disease: document.getElementById('heart_disease').value,
+        ever_married: document.getElementById('ever_married').value,
+        work_type: document.getElementById('work_type').value,
+        Residence_type: document.getElementById('residence_type').value,
+        avg_glucose_level: document.getElementById('avg_glucose_level').value,
+        bmi: document.getElementById('bmi').value,
+        smoking_status: document.getElementById('smoking_status').value
+    };
+
+    try {
+        const response = await fetch('/stroke-predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            displayResults(result.confidence, result.prediction);
+        } else {
+            alert('Prediction Error: ' + (result.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Connection failed. Please ensure the server is running.');
+    } finally {
+        btn.innerHTML = '<span class="material-symbols-outlined">bolt</span> Run Risk Assessment';
+        btn.disabled = false;
+    }
+}
+
+function displayResults(confidence, label) {
+    document.getElementById('result-placeholder').classList.add('hidden');
+    document.getElementById('result-card').classList.remove('hidden');
+
+    const score = Math.round(confidence);
+    let statusText = "Normal (Low Risk)";
+    let statusIcon = "check_circle";
+    let statusClass = "bg-emerald-50 text-emerald-600";
+    let gaugeColor = "#22c55e"; // Green
+    let advice = ['Maintain active lifestyle', 'Monitor BP twice monthly', 'Annual preventative screening'];
+
+    if (score > 70) {
+        statusText = "High Stroke Risk";
+        statusIcon = "error";
+        statusClass = "bg-red-50 text-red-600";
+        gaugeColor = "#ef4444"; // Red
+        advice = ['Immediate clinical consultation', 'Schedule carotid ultrasound', 'Complete metabolic panel assessment'];
+    } else if (score > 35) {
+        statusText = "Moderate Stroke Risk";
+        statusIcon = "warning";
+        statusClass = "bg-amber-50 text-amber-600";
+        gaugeColor = "#f59e0b"; // Orange
+        advice = ['Schedule follow-up within 7 days', 'Review dietary sodium intake', 'Perform stress test assessment'];
+    }
+
+    // Update Gauge
+    const path = document.getElementById('gauge-path');
+    const pct = document.getElementById('confidence-pct');
+    path.style.strokeDasharray = score + ', 100';
+    path.style.stroke = gaugeColor;
+
+    updateStatus(statusText, statusIcon, statusClass);
+    showAdvice(advice);
+
+    // Animate number
+    let start = 0;
+    const interval = setInterval(() => {
+        if (start >= score) {
+            pct.textContent = score + '%';
+            clearInterval(interval);
+        } else {
+            pct.textContent = start + '%';
+            start++;
+        }
+    }, 10);
+
+    // Update Metrics (Auxiliary)
+    const glucose = parseFloat(document.getElementById('avg_glucose_level').value);
+    const bmi = parseFloat(document.getElementById('bmi').value);
+
+    document.getElementById('glucose-stat').textContent = glucose + ' mg/dL';
+    document.getElementById('glucose-desc').textContent = glucose > 140 ? 'Elevated' : 'Normal';
+    document.getElementById('glucose-desc').className = 'text-sm font-black ' + (glucose > 140 ? 'text-orange-500' : 'text-slate-800');
+
+    document.getElementById('bmi-stat').textContent = bmi.toFixed(1);
+    let bmiText = "Healthy";
+    if (bmi < 18.5) bmiText = "Underweight";
+    else if (bmi > 30) bmiText = "Obese";
+    else if (bmi > 25) bmiText = "Overweight";
+    document.getElementById('bmi-desc').textContent = bmiText;
+    document.getElementById('bmi-desc').className = 'text-sm font-black ' + (bmi > 25 ? 'text-orange-500' : 'text-slate-800');
+
+    // Auto-scroll to result on mobile
+    if (window.innerWidth < 1024) {
+        document.getElementById('result-card').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function updateStatus(text, icon, cls) {
+    const badge = document.getElementById('status-badge');
+    const sIcon = document.getElementById('status-icon');
+    const sText = document.getElementById('status-text');
+    badge.className = 'inline-flex items-center gap-2 px-6 py-2.5 rounded-full mb-4 ' + cls;
+    sIcon.textContent = icon;
+    sText.textContent = text;
+}
+
+function showAdvice(items) {
+    const list = document.getElementById('advice-list');
+    list.innerHTML = items.map((item, i) => {
+        return '<div class="flex gap-4 group">' +
+            '<div class="w-6 h-6 rounded-lg bg-white border border-slate-200 flex-shrink-0 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:border-blue-200 group-hover:text-blue-600 transition-colors">' + (i + 1) + '</div>' +
+            '<p class="text-xs text-slate-600 font-medium leading-relaxed">' + item + '</p>' +
+        '</div>';
+    }).join('');
+}
+
+window.doLogout = () => {
+    fetch('/api/logout', { method: 'POST' }).then(() => window.location.href = '/');
+}
+})();
+</script>
+</body>
+
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Medical AI Reports — SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#2563eb' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #f8fafc; color: #1e293b; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .sidebar-item-active { background-color: #eff6ff; color: #2563eb; border-right: 4px solid #2563eb; }
+        .filter-active { background-color: #2563eb; color: #fff; border-color: #2563eb; }
+    </style>
+</head>
+
+<body class="min-h-screen font-sans antialiased flex">
+    <aside class="w-64 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20">
+        <div class="p-6 flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                <span class="material-symbols-outlined">medical_services</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">grid_view</span> Dashboard
+            </a>
+            <a href="patients.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">group</span> Patients
+            </a>
+            <a href="diagnostics.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">stethoscope</span> Diagnostics
+            </a>
+            <a href="history.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">history</span> History
+            </a>
+            <a href="medical_reports.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg sidebar-item-active">
+                <span class="material-symbols-outlined">description</span> AI Reports
+            </a>
+            <a href="profile.html" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">person</span> Profile
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-100">
+            <a href="#" onclick="doLogout()" class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors">
+                <span class="material-symbols-outlined">logout</span> Logout
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 ml-64 p-8">
+        <header class="mb-8">
+            <h2 class="text-3xl font-black text-slate-800 tracking-tight">All Medical AI Reports</h2>
+            <p class="text-slate-500 font-medium mt-1">Every saved chat prescription in one place — filter by day without opening each patient.</p>
+        </header>
+
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button type="button" data-period="today" onclick="setPeriod('today')" class="period-btn px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Today</button>
+            <button type="button" data-period="yesterday" onclick="setPeriod('yesterday')" class="period-btn px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Yesterday</button>
+            <button type="button" data-period="week" onclick="setPeriod('week')" class="period-btn px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Last 7 days</button>
+            <button type="button" data-period="month" onclick="setPeriod('month')" class="period-btn px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">This month</button>
+            <button type="button" data-period="all" onclick="setPeriod('all')" class="period-btn filter-active px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold">All</button>
+        </div>
+
+        <div id="loading" class="text-center py-16 text-slate-400 font-semibold">Loading…</div>
+        <div id="empty" class="hidden text-center py-16 text-slate-500">No reports for this period. Save from the Medical Assistant after an AI reply.</div>
+        <div id="list" class="hidden space-y-6"></div>
+    </main>
+
+    <script>
+        var allReports = [];
+        var currentPeriod = 'all';
+
+        fetch('/api/me', { credentials: 'same-origin' }).then(function (r) {
+            if (!r.ok) window.location.href = '/';
+        });
+
+        function doLogout() {
+            fetch('/api/logout', { method: 'POST' }).then(function () { window.location.href = '/'; });
+        }
+
+        function parseStructured(jsonStr) {
+            try { return JSON.parse(jsonStr || '{}'); } catch (e) { return {}; }
+        }
+
+        function esc(t) {
+            var d = document.createElement('div');
+            d.textContent = t || '';
+            return d.innerHTML;
+        }
+
+        function parseReportDate(createdAt) {
+            if (!createdAt) return null;
+            var s = String(createdAt).replace(' ', 'T');
+            if (!s.endsWith('Z') && s.indexOf('+') === -1) s += 'Z';
+            var d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function reportInPeriod(createdAt, period) {
+            if (period === 'all') return true;
+            var d = parseReportDate(createdAt);
+            if (!d) return true;
+            var now = new Date();
+            var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            var reportDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            var diffDays = Math.floor((start - reportDay) / 86400000);
+            if (period === 'today') return diffDays === 0;
+            if (period === 'yesterday') return diffDays === 1;
+            if (period === 'week') return diffDays >= 0 && diffDays < 7;
+            if (period === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            return true;
+        }
+
+        function formatGroupLabel(createdAt) {
+            var d = parseReportDate(createdAt);
+            if (!d) return 'Unknown date';
+            var now = new Date();
+            var start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            var reportDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            var diffDays = Math.floor((start - reportDay) / 86400000);
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function bulletsHtml(s) {
+            var meds = s.medications || [];
+            var parts = [];
+            if (s.primary_diagnosis) parts.push('<li><span class="font-bold text-slate-700">Diagnosis:</span> ' + esc(s.primary_diagnosis) + '</li>');
+            if (s.severity) parts.push('<li><span class="font-bold text-slate-700">Severity:</span> ' + esc(s.severity) + '</li>');
+            if (s.treatment) parts.push('<li><span class="font-bold text-slate-700">Treatment:</span> ' + esc(s.treatment) + '</li>');
+            if (meds.length) {
+                parts.push('<li class="mt-2"><span class="font-bold text-slate-700">Medications:</span><ul class="list-disc pl-5 mt-1 space-y-1">');
+                meds.forEach(function (m) {
+                    var line = m.raw || m.name || '';
+                    if (m.name && (m.dosage || m.frequency || m.duration)) {
+                        line = (m.name || '') + (m.dosage ? ' — Dose: ' + m.dosage : '') + (m.frequency ? ' — Freq: ' + m.frequency : '') + (m.duration ? ' — Duration: ' + m.duration : '');
+                    }
+                    parts.push('<li class="text-sm">' + esc(line) + '</li>');
+                });
+                parts.push('</ul></li>');
+            }
+            if (!parts.length) parts.push('<li class="text-slate-500 text-sm">Open print view for full report.</li>');
+            return '<ul class="text-sm text-slate-600 space-y-1 list-disc pl-4">' + parts.join('') + '</ul>';
+        }
+
+        function renderList() {
+            var filtered = allReports.filter(function (r) { return reportInPeriod(r.created_at, currentPeriod); });
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('empty').classList.add('hidden');
+            document.getElementById('list').classList.add('hidden');
+            if (filtered.length === 0) {
+                document.getElementById('empty').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('list').classList.remove('hidden');
+
+            var groups = {};
+            filtered.forEach(function (r) {
+                var label = formatGroupLabel(r.created_at);
+                if (!groups[label]) groups[label] = [];
+                groups[label].push(r);
+            });
+
+            var html = '';
+            Object.keys(groups).forEach(function (label) {
+                html += '<section class="mb-8"><h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">';
+                html += '<span class="material-symbols-outlined text-base text-blue-600">calendar_today</span>' + esc(label) + '</h3><div class="space-y-4">';
+                groups[label].forEach(function (r) {
+                    var s = parseStructured(r.structured_json);
+                    var modeLabel = r.mode === 'lab_context' ? 'Patient / lab linked' : 'Normal chat';
+                    var timeStr = '';
+                    var d = parseReportDate(r.created_at);
+                    if (d) timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                    html += '<article class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">';
+                    html += '<div class="px-5 py-4 border-b border-slate-50 flex flex-wrap justify-between gap-2 items-start">';
+                    html += '<div><p class="text-xs font-black text-slate-400 uppercase tracking-wider">' + esc(timeStr || r.created_at) + '</p>';
+                    var displayName = r.patient_names || '—';
+                    if (displayName && displayName.indexOf(' (') !== -1) {
+                        displayName = displayName.split(' (')[0];
+                    }
+                    html += '<p class="text-sm font-bold text-slate-800 mt-1">' + esc(displayName) + '</p>';
+                    html += '<span class="inline-block mt-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-lg ' + (r.mode === 'lab_context' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600') + '">' + modeLabel + '</span></div>';
+                    html += '<div class="flex gap-2">';
+                    html += '<a href="medical_report_print.html?id=' + r.id + '" target="_blank" class="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-black uppercase tracking-wide hover:bg-blue-700">';
+                    html += '<span class="material-symbols-outlined text-sm">print</span> View Report</a>';
+                    html += '<button type="button" onclick="delReport(' + r.id + ')" class="px-3 py-2 rounded-xl border border-red-100 text-red-600 text-xs font-bold hover:bg-red-50">Delete</button></div></div>';
+                    html += '<div class="px-5 py-4">' + bulletsHtml(s) + '</div></article>';
+                });
+                html += '</div></section>';
+            });
+            document.getElementById('list').innerHTML = html;
+        }
+
+        window.setPeriod = function (period) {
+            currentPeriod = period;
+            document.querySelectorAll('.period-btn').forEach(function (btn) {
+                btn.classList.toggle('filter-active', btn.getAttribute('data-period') === period);
+            });
+            renderList();
+        };
+
+        window.delReport = async function (id) {
+            if (!confirm('Delete this report from AI Reports, History, Patients, and Dashboard?')) return;
+            var res = await fetch('/api/medical-reports/' + id, { method: 'DELETE', credentials: 'same-origin' });
+            if (res.ok) load();
+        };
+
+        async function load() {
+            document.getElementById('loading').classList.remove('hidden');
+            var res = await fetch('/api/medical-reports', { credentials: 'same-origin' });
+            var data = await res.json();
+            if (!res.ok) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('empty').classList.remove('hidden');
+                document.getElementById('empty').textContent = data.error || 'Could not load.';
+                return;
+            }
+            allReports = data.reports || [];
+            renderList();
+        }
+
+        load();
+    </script>
+</body>
+
+</html>

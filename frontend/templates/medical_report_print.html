@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Report — SehatAi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Inter, system-ui, sans-serif;
+            background: #cbd5e1;
+            color: #111827;
+            padding: 28px 16px 48px;
+            line-height: 1.5;
+        }
+
+        /* ── Toolbar ── */
+        .toolbar {
+            max-width: 760px;
+            margin: 0 auto 18px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .toolbar button, .toolbar a {
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-print { background: #1d4ed8; color: #fff; }
+        .btn-back  { background: #fff; color: #374151; border: 1px solid #d1d5db !important; }
+
+        /* ── Page Sheet ── */
+        .rpt {
+            max-width: 760px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #9ca3af;
+            border-radius: 4px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.20);
+            overflow: hidden;
+        }
+
+        /* ══ HOSPITAL HEADER ══ */
+        .rpt-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%);
+            padding: 0;
+            display: flex;
+            align-items: stretch;
+        }
+        .rpt-header-left {
+            padding: 20px 24px 18px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .rpt-hosp-name {
+            font-size: 1.55rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+        .rpt-hosp-tagline {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #93c5fd;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .rpt-hosp-address {
+            font-size: 10px;
+            color: #bfdbfe;
+            margin-top: 6px;
+            line-height: 1.6;
+        }
+        .rpt-header-right {
+            background: rgba(0,0,0,0.18);
+            padding: 16px 20px;
+            min-width: 180px;
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+        }
+        .rpt-header-right .rpt-label {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #93c5fd;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        .rpt-header-right .rpt-value {
+            font-size: 11px;
+            color: #e0f2fe;
+            font-weight: 600;
+        }
+
+        /* ══ REPORT TITLE BAR ══ */
+        .rpt-title-bar {
+            background: #f0f9ff;
+            border-top: 3px solid #1d4ed8;
+            border-bottom: 1px solid #bae6fd;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .rpt-title-bar h1 {
+            font-size: 1rem;
+            font-weight: 900;
+            color: #1e3a8a;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .rpt-title-bar .rpt-title-meta {
+            font-size: 10.5px;
+            color: #0369a1;
+            font-weight: 600;
+        }
+
+        /* ══ BODY ══ */
+        .rpt-body { padding: 18px 24px 24px; }
+
+        /* ══ SECTION CARD ══ */
+        .rpt-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .rpt-card-hdr {
+            background: #eff6ff;
+            padding: 5px 14px;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #1d4ed8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid #bfdbfe;
+        }
+        .rpt-card-hdr-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #3b82f6;
+            flex-shrink: 0;
+        }
+
+        /* Two-column row inside card */
+        .rpt-row {
+            display: flex;
+            min-height: 0;
+        }
+
+        /* ── LEFT PANEL ── */
+        .rpt-left {
+            width: 136px;
+            min-width: 136px;
+            background: #f8fafc;
+            border-right: 1px solid #e5e7eb;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Test badge pill */
+        .rpt-badge {
+            width: 100%;
+            border-radius: 7px;
+            padding: 7px 8px;
+            text-align: center;
+        }
+        .rpt-badge.blue  { background: #1d4ed8; }
+        .rpt-badge.dark  { background: #1e293b; }
+        .rpt-badge.green { background: #065f46; }
+        .rpt-badge.amber { background: #92400e; }
+
+        .rpt-badge .badge-label {
+            font-size: 8.5px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.65);
+        }
+        .rpt-badge .badge-val {
+            font-size: 12px;
+            font-weight: 900;
+            color: #fff;
+            margin-top: 2px;
+            word-break: break-word;
+            line-height: 1.2;
+        }
+        .rpt-badge .badge-val.found   { color: #fca5a5; }
+        .rpt-badge .badge-val.clear   { color: #86efac; }
+        .rpt-badge .badge-val.normal  { color: #86efac; }
+        .rpt-badge .badge-val.abnormal{ color: #fca5a5; }
+        .rpt-badge .badge-val.positive{ color: #fca5a5; }
+        .rpt-badge .badge-val.negative{ color: #86efac; }
+        .rpt-badge .badge-val.detected{ color: #fca5a5; }
+
+        .rpt-scan-img {
+            width: 114px;
+            height: 82px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid #cbd5e1;
+            background: #e2e8f0;
+        }
+        .rpt-scan-lbl {
+            font-size: 8.5px;
+            color: #94a3b8;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.04em;
+        }
+        .rpt-no-img {
+            width: 114px;
+            height: 82px;
+            border-radius: 6px;
+            border: 1px dashed #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #94a3b8;
+            font-weight: 600;
+            text-align: center;
+            background: #f1f5f9;
+        }
+
+        /* ── RIGHT PANEL ── */
+        .rpt-right {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 12.5px;
+            color: #1f2937;
+        }
+        .rpt-field {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 5px;
+            align-items: baseline;
+            line-height: 1.4;
+        }
+        .rpt-field-lbl {
+            font-weight: 700;
+            color: #475569;
+            min-width: 90px;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+        .rpt-field-val {
+            color: #111827;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .rpt-field-val.hi  { color: #1d4ed8; font-weight: 700; }
+        .rpt-field-val.err { color: #b91c1c; font-weight: 700; }
+        .rpt-field-val.ok  { color: #15803d; font-weight: 700; }
+
+        .rpt-divider { border: none; border-top: 1px dashed #e5e7eb; margin: 8px 0; }
+
+        /* section sub-label */
+        .rpt-sublabel {
+            font-size: 9px;
+            font-weight: 800;
+            color: #94a3b8;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        /* bullet list */
+        .rpt-bullets { list-style: none; padding: 0; margin: 2px 0 0; }
+        .rpt-bullets li {
+            display: flex;
+            gap: 6px;
+            font-size: 12px;
+            color: #374151;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+        .rpt-bullets li::before {
+            content: '▸';
+            color: #1d4ed8;
+            font-weight: 900;
+            flex-shrink: 0;
+            font-size: 10px;
+            margin-top: 1px;
+        }
+
+        /* severity pill */
+        .sev-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+        }
+
+        /* ══ MEDICATIONS TABLE ══ */
+        .rpt-med-wrap { overflow-x: auto; }
+        .rpt-med-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }
+        .rpt-med-table th {
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 6px 12px;
+            font-size: 8.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: left;
+            border-bottom: 1px solid #bfdbfe;
+        }
+        .rpt-med-table td {
+            border-bottom: 1px solid #f1f5f9;
+            padding: 7px 12px;
+            vertical-align: top;
+            color: #1f2937;
+        }
+        .rpt-med-table tr:nth-child(even) td { background: #f8fafc; }
+
+        /* ══ NEXT APPOINTMENT ══ */
+        .rpt-appt {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .rpt-appt-icon { font-size: 24px; flex-shrink: 0; line-height: 1; }
+        .rpt-appt-body { font-size: 12.5px; color: #1e40af; line-height: 1.5; }
+        .rpt-appt-body strong { font-weight: 800; color: #1e3a8a; font-size: 13px; }
+        .rpt-appt-sub { font-size: 10.5px; color: #3b82f6; margin-top: 2px; }
+
+        /* ══ DOCTOR FOOTER ══ */
+        .rpt-doctor-row {
+            margin-top: 16px;
+            border-top: 2px solid #1d4ed8;
+            padding-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+        }
+        .rpt-doctor-left { flex: 1; }
+        .rpt-doctor-name {
+            font-size: 15px;
+            font-weight: 900;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+        .rpt-doctor-spec {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1d4ed8;
+            margin-top: 1px;
+        }
+        .rpt-doctor-clinic {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+        .rpt-doctor-contact {
+            font-size: 10.5px;
+            color: #6b7280;
+            margin-top: 5px;
+            line-height: 1.7;
+        }
+        .rpt-doctor-reg {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #9ca3af;
+            margin-top: 4px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .rpt-sign-col { text-align: center; min-width: 155px; }
+        .rpt-stamp {
+            width: 72px;
+            height: 72px;
+            border: 2.5px solid #1d4ed8;
+            border-radius: 50%;
+            margin: 0 auto 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #1d4ed8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            line-height: 1.3;
+            text-align: center;
+        }
+        .rpt-sign-line {
+            border-top: 1px solid #374151;
+            margin-bottom: 4px;
+            padding-top: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        /* ══ DISCLAIMER ══ */
+        .rpt-disclaimer {
+            margin-top: 14px;
+            font-size: 9px;
+            color: #9ca3af;
+            border-top: 1px dashed #e5e7eb;
+            padding-top: 10px;
+            line-height: 1.7;
+        }
+        .rpt-ai-note {
+            font-size: 9px;
+            color: #6b7280;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* ══ ERROR ══ */
+        .err { color: #b91c1c; text-align: center; padding: 56px; font-size: 14px; }
+
+        /* ══ PRINT ══ */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .toolbar { display: none; }
+            .rpt {
+                box-shadow: none;
+                border: 1px solid #000;
+                max-width: none;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toolbar">
+        <button type="button" class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+        <a href="medical_reports.html" class="btn-back">← Back to Reports</a>
+    </div>
+
+    <div id="content" class="rpt">
+        <p class="err" id="err">Loading…</p>
+    </div>
+
+    <script>
+        var params = new URLSearchParams(window.location.search);
+        var reportId = params.get('id');
+        var el = document.getElementById('content');
+
+        function esc(t) {
+            var d = document.createElement('div');
+            d.textContent = (t == null ? '' : String(t));
+            return d.innerHTML;
+        }
+
+        /* Convert raw AI text → clean HTML */
+        function textToHtml(text) {
+            if (!text) return '<p style="color:#cbd5e1;font-size:12px;">—</p>';
+            var lines = text.split('\n');
+            var out = ''; var inUl = false;
+            for (var i = 0; i < lines.length; i++) {
+                var ln = lines[i].replace(/\*\*/g, '').trim();
+                if (!ln) continue;
+                if (/^[-•*▸]\s/.test(ln)) {
+                    if (!inUl) { out += '<ul class="rpt-bullets">'; inUl = true; }
+                    out += '<li>' + esc(ln.substring(2)) + '</li>';
+                } else {
+                    if (inUl) { out += '</ul>'; inUl = false; }
+                    out += '<p style="margin:3px 0; font-size:12px; color:#374151;">' + esc(ln) + '</p>';
+                }
+            }
+            if (inUl) out += '</ul>';
+            return out;
+        }
+
+        /* Determine badge css class from result word */
+        function resultClass(word) {
+            var w = (word || '').toLowerCase().trim();
+            if (['found','positive','abnormal','detected','high risk','pneumonia'].some(function(k){ return w.indexOf(k) >= 0; }))
+                return 'found';
+            if (['normal','negative','clear','not found','no finding'].some(function(k){ return w.indexOf(k) >= 0; }))
+                return 'clear';
+            return '';
+        }
+
+        /* Left panel: test badge + scan thumbnail */
+        function makeLeftPanel(badgeColor, badgeLabel, badgeVal, imgSrc, imgLbl) {
+            var rCls = resultClass(badgeVal);
+            var imgHtml = imgSrc
+                ? '<img src="' + esc(imgSrc) + '" class="rpt-scan-img" alt="scan">' +
+                  '<div class="rpt-scan-lbl">' + esc(imgLbl || 'Attached Scan') + '</div>'
+                : '<div class="rpt-no-img">No image<br>attached</div>';
+
+            return '<div class="rpt-left">' +
+                '<div class="rpt-badge ' + badgeColor + '">' +
+                '<div class="badge-label">' + esc(badgeLabel) + '</div>' +
+                '<div class="badge-val ' + rCls + '">' + esc(badgeVal || '—') + '</div>' +
+                '</div>' +
+                imgHtml +
+                '</div>';
+        }
+
+        /* Generic section card builder */
+        function card(header, leftHtml, rightHtml) {
+            return '<div class="rpt-card">' +
+                '<div class="rpt-card-hdr"><span class="rpt-card-hdr-dot"></span>' + header + '</div>' +
+                '<div class="rpt-row">' + leftHtml +
+                '<div class="rpt-right">' + rightHtml + '</div>' +
+                '</div></div>';
+        }
+
+        /* Field row */
+        function field(lbl, val, cls) {
+            return '<div class="rpt-field"><span class="rpt-field-lbl">' + esc(lbl) + '</span>' +
+                   '<span class="rpt-field-val ' + (cls||'') + '">' + esc(val || '—') + '</span></div>';
+        }
+
+        /* Build full report */
+        function buildReport(rep, me) {
+            var s = {};
+            try { s = JSON.parse(rep.structured_json || '{}'); } catch(e) {}
+
+            /* ── Doctor / Clinic ── */
+            var dName   = (me && me.user && me.user.full_name)      ? me.user.full_name      : 'Physician';
+            var dSpec   = (me && me.user && me.user.specialization)  ? me.user.specialization : 'General Practitioner';
+            var dClinic = (me && me.user && me.user.clinic_name)     ? me.user.clinic_name    : 'SehatAi Medical Center';
+            var dPhone  = (me && me.user && me.user.phone)           ? me.user.phone          : '';
+            var dEmail  = (me && me.user && me.user.email)           ? me.user.email          : '';
+            var dReg    = (me && me.user && me.user.registration_no) ? me.user.registration_no: '';
+
+            /* ── Patient ── */
+            var pName   = rep.patient_names   || '—';
+            if (pName && pName.indexOf(' (') !== -1) {
+                pName = pName.split(' (')[0];
+            }
+            var pAge    = s.patient_age        || rep.patient_age    || '—';
+            var pGender = s.patient_gender     || rep.patient_gender || '—';
+            var pDOB    = s.patient_dob        || rep.patient_dob    || '';
+            var pMRN    = rep.mrn || rep.patient_id || '';
+            var visitDate = (rep.created_at || '').split('T')[0] || rep.created_at || '—';
+
+            /* ── AI Test / Imaging ── */
+            var aiTest   = s.ai_test_name   || s.test_name   || '';
+            var aiResult = s.ai_result_word || s.result_word || '';
+            var aiImgSrc = s.scan_image_url || rep.scan_image || '';
+            var aiImgLbl = s.scan_image_label || 'AI Scan';
+
+            if (!aiTest && s.primary_diagnosis) {
+                aiTest   = s.primary_diagnosis;
+                aiResult = s.severity || (s.primary_diagnosis ? 'Detected' : '—');
+            }
+
+            /* ── Clinical ── */
+            var diagnosis = s.primary_diagnosis || '—';
+            var severity  = s.severity          || '';
+            var caseDesc  = s.case_description  || '';
+            var treatment = s.treatment         || '';
+            var otherDx   = s.other_diagnoses   || '';
+            var allergies = s.allergies         || 'NKDA';
+            var vitals    = s.vitals            || '';
+            var nextAppt  = s.next_appointment  || 'As advised by your doctor. Please contact the clinic to schedule.';
+
+            /* ── Medications ── */
+            var meds = s.medications || [];
+            var medRows = meds.length
+                ? meds.map(function(m, i) {
+                    return '<tr><td>' + (i+1) + '</td>' +
+                           '<td><strong>' + esc(m.name || m.raw || '—') + '</strong></td>' +
+                           '<td>' + esc(m.dosage    || '—') + '</td>' +
+                           '<td>' + esc(m.frequency || '—') + '</td>' +
+                           '<td>' + esc(m.duration  || '—') + '</td></tr>';
+                  }).join('')
+                : '<tr><td colspan="5" style="text-align:center;color:#6b7280;font-style:italic;padding:10px;">See clinical notes for medication instructions.</td></tr>';
+
+            var html = '';
+
+            /* ══════════════════════════════════
+               HOSPITAL HEADER
+            ══════════════════════════════════ */
+            html += '<div class="rpt-header">' +
+                '<div class="rpt-header-left">' +
+                '<div class="rpt-hosp-name">⚕ ' + esc(dClinic) + '</div>' +
+                '<div class="rpt-hosp-tagline">AI-Assisted Medical Facility</div>' +
+                '<div class="rpt-hosp-address">' +
+                (dPhone ? '📞 ' + esc(dPhone) + '&nbsp;&nbsp;' : '') +
+                (dEmail ? '✉ ' + esc(dEmail) : '') +
+                '</div>' +
+                '</div>' +
+                '<div class="rpt-header-right">' +
+                '<div class="rpt-label">Report ID</div>' +
+                '<div class="rpt-value">#' + esc(String(rep.id || '—')) + '</div>' +
+                '<div class="rpt-label" style="margin-top:8px;">Date of Visit</div>' +
+                '<div class="rpt-value">' + esc(visitDate) + '</div>' +
+                (dReg ? '<div class="rpt-label" style="margin-top:8px;">Reg. No.</div><div class="rpt-value">' + esc(dReg) + '</div>' : '') +
+                '</div>' +
+                '</div>';
+
+            /* ══════════════════════════════════
+               TITLE BAR
+            ══════════════════════════════════ */
+            html += '<div class="rpt-title-bar">' +
+                '<h1>After Visit Summary</h1>' +
+                '<span class="rpt-title-meta">Dr. ' + esc(dName) + ' &nbsp;·&nbsp; ' + esc(dSpec) + '</span>' +
+                '</div>';
+
+            /* ══════════════════════════════════
+               BODY
+             ══════════════════════════════════ */
+            html += '<div class="rpt-body">';
+
+            /* Patient Demographics Bar */
+            html += '<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:12px; line-height:1.6; color:#1e293b;">' +
+                '<strong>Patient:</strong> ' + esc(pName) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+                '<strong>Age:</strong> ' + esc(pAge) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+                '<strong>Gender:</strong> ' + esc(pGender) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+                '<strong>ID:</strong> ' + esc(pMRN) + ' &nbsp;&nbsp;|&nbsp;&nbsp; ' +
+                '<strong>Visit Date:</strong> ' + esc(visitDate) +
+                '</div>';
+
+            /* Section 1: Symptoms & Case Query */
+            var rawUser = s.user_query || rep.user_query || '';
+            if (rawUser) {
+                html += '<div style="margin-bottom:20px;">' +
+                    '<h3 style="font-size:13px; font-weight:800; color:#1e3a8a; border-bottom:2px solid #3b82f6; padding-bottom:4px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Patient Symptoms &amp; Case Query</h3>' +
+                    '<div style="font-size:12px; color:#374151; background:#f8fafc; border-left:3px solid #3b82f6; padding:10px 14px; border-radius:0 8px 8px 0; line-height:1.6; white-space:pre-wrap;">' + esc(rawUser) + '</div>' +
+                    '</div>';
+            }
+
+            /* Section 2: Clinical Assessment & Diagnosis */
+            var showAssessment = caseDesc || diagnosis !== '—' || aiTest || aiResult || aiImgSrc;
+            if (showAssessment) {
+                var severityLow = (severity || '').toLowerCase();
+                var sevBg = severityLow.includes('severe') || severityLow.includes('high') || severityLow.includes('critical')
+                    ? '#fef2f2' : severityLow.includes('moderate') || severityLow.includes('medium')
+                    ? '#fffbeb' : '#f0fdf4';
+                var sevBdr = severityLow.includes('severe') || severityLow.includes('high') || severityLow.includes('critical')
+                    ? '#fca5a5' : severityLow.includes('moderate') || severityLow.includes('medium')
+                    ? '#fcd34d' : '#86efac';
+                var sevTxt = severityLow.includes('severe') || severityLow.includes('high') || severityLow.includes('critical')
+                    ? '#991b1b' : severityLow.includes('moderate') || severityLow.includes('medium')
+                    ? '#92400e' : '#166534';
+
+                html += '<div style="margin-bottom:20px;">' +
+                    '<h3 style="font-size:13px; font-weight:800; color:#1e3a8a; border-bottom:2px solid #3b82f6; padding-bottom:4px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Clinical Assessment &amp; Diagnosis</h3>';
+
+                // Display Attached Scan if any
+                if (aiImgSrc) {
+                    html += '<div style="margin-bottom:14px; text-align:center;">' +
+                        '<img src="' + esc(aiImgSrc) + '" style="max-height:200px; border-radius:8px; border:1px solid #cbd5e1;" alt="Scan">' +
+                        '<div style="font-size:10px; color:#94a3b8; font-weight:600; margin-top:4px;">' + esc(aiImgLbl || aiTest || 'Attached Scan') + '</div>' +
+                        '</div>';
+                }
+
+                html += '<div style="font-size:12px; color:#374151; line-height:1.6;">' +
+                    '<div style="margin-bottom:6px;"><strong>Diagnosis:</strong> <span style="font-size:13px; font-weight:700; color:#111827;">' + esc(diagnosis) + '</span></div>';
+
+                if (aiTest) {
+                    html += '<div style="margin-bottom:6px;"><strong>Modality / Scan:</strong> ' + esc(aiTest) + '</div>';
+                }
+                if (aiResult) {
+                    html += '<div style="margin-bottom:6px;"><strong>AI Prediction:</strong> ' + esc(aiResult) + '</div>';
+                }
+
+                if (severity) {
+                    html += '<div style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">' +
+                        '<strong>Severity:</strong> ' +
+                        '<span style="padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800; border:1.5px solid ' + esc(sevBdr) + '; background:' + esc(sevBg) + '; color:' + esc(sevTxt) + ';">' +
+                        esc(severity.toUpperCase()) +
+                        '</span>' +
+                        '</div>';
+                }
+
+                if (caseDesc) {
+                    html += '<div style="margin-top:8px;"><strong>Findings:</strong><div style="margin-top:2px; padding-left:2px;">' + textToHtml(caseDesc) + '</div></div>';
+                }
+                if (otherDx) {
+                    html += '<div style="margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:8px;"><strong>Differential Diagnosis:</strong><div style="margin-top:2px; padding-left:2px;">' + textToHtml(otherDx) + '</div></div>';
+                }
+                if (vitals) {
+                    html += '<div style="margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:8px;"><strong>Vitals:</strong><div style="margin-top:2px; padding-left:2px;">' + textToHtml(vitals) + '</div></div>';
+                }
+
+                html += '</div></div>';
+            }
+
+            /* Section 3: Treatment Plan & Advice */
+            if (treatment) {
+                html += '<div style="margin-bottom:20px;">' +
+                    '<h3 style="font-size:13px; font-weight:800; color:#1e3a8a; border-bottom:2px solid #3b82f6; padding-bottom:4px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Treatment Plan &amp; Advice</h3>' +
+                    '<div style="font-size:12px; color:#374151; line-height:1.6; padding-left:2px;">' + textToHtml(treatment) + '</div>' +
+                    '</div>';
+            }
+
+            /* Section 4: Recommended Medications */
+            html += '<div style="margin-bottom:20px;">' +
+                '<h3 style="font-size:13px; font-weight:800; color:#1e3a8a; border-bottom:2px solid #3b82f6; padding-bottom:4px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Recommended Medications</h3>' +
+                '<div style="font-size:12px; color:#374151; line-height:1.6;">' +
+                '<table class="rpt-med-table" style="width:100%; border-collapse:collapse; margin-top:4px;">' +
+                '<thead>' +
+                '<tr style="background:#eff6ff; color:#1d4ed8; font-size:8px; text-transform:uppercase; border-bottom:1px solid #bfdbfe;">' +
+                '<th style="padding:6px 10px; text-align:left;">#</th>' +
+                '<th style="padding:6px 10px; text-align:left;">Medicine</th>' +
+                '<th style="padding:6px 10px; text-align:left;">Dosage</th>' +
+                '<th style="padding:6px 10px; text-align:left;">Frequency</th>' +
+                '<th style="padding:6px 10px; text-align:left;">Duration</th>' +
+                '</tr>' +
+                '</thead>' +
+                '<tbody>' + medRows + '</tbody>' +
+                '</table>' +
+                '</div></div>';
+
+            /* Next Appointment */
+            html += '<div class="rpt-appt">' +
+                '<div class="rpt-appt-icon">📅</div>' +
+                '<div class="rpt-appt-body">' +
+                '<strong>Next Appointment:</strong> ' + esc(nextAppt) +
+                '<div class="rpt-appt-sub">If you need to reschedule, please contact our office using the details above.</div>' +
+                '</div></div>';
+
+            /* Doctor Signature Row */
+            html += '<div class="rpt-doctor-row">' +
+                '<div>' +
+                '<div class="rpt-doctor-name">Dr. ' + esc(dName) + '</div>' +
+                '<div class="rpt-doctor-spec">' + esc(dSpec) + '</div>' +
+                '<div class="rpt-doctor-clinic">' + esc(dClinic) + '</div>' +
+                '<div class="rpt-doctor-contact">' +
+                (dPhone ? '📞 ' + esc(dPhone) + '<br>' : '') +
+                (dEmail ? '✉ ' + esc(dEmail) : '') +
+                '</div>' +
+                (dReg ? '<div class="rpt-doctor-reg">Reg. No: ' + esc(dReg) + '</div>' : '') +
+                '</div>' +
+                '<div class="rpt-sign-col">' +
+                '<div class="rpt-stamp">Official<br>Stamp</div>' +
+                '<div class="rpt-sign-line">Authorized Signatory</div>' +
+                '<div style="font-size:10.5px; font-weight:700; color:#374151;">Dr. ' + esc(dName) + '</div>' +
+                '</div>' +
+                '</div>';
+
+            /* Disclaimer & Notes */
+            html += '<div class="rpt-disclaimer">' +
+                'This document is a confidential medical record generated with AI assistance. ' +
+                'For emergencies call <strong>1122</strong> (Rescue) or visit the nearest emergency department.' +
+                '</div>' +
+                '<div class="rpt-ai-note">' +
+                '⚡ AI-assisted report generated by SehatAi. Verified &amp; authorized by Dr. ' + esc(dName) + '.' +
+                '</div>';
+
+            html += '</div>'; /* end rpt-body */
+            return html;
+        }
+
+        /* ── Fetch and Render ── */
+        if (!reportId) {
+            el.innerHTML = '<p class="err">Missing report id in URL.</p>';
+        } else {
+            Promise.all([
+                fetch('/api/medical-reports/' + encodeURIComponent(reportId), { credentials: 'same-origin' })
+                    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); }),
+                fetch('/api/me', { credentials: 'same-origin' })
+                    .then(function(r) { return r.json().catch(function() { return {}; }); })
+            ]).then(function(results) {
+                var x  = results[0];
+                var me = results[1];
+                if (!x.ok || !x.d.report) {
+                    el.innerHTML = '<p class="err">' + esc((x.d && x.d.error) || 'Report not found.') + '</p>';
+                    return;
+                }
+                el.innerHTML = buildReport(x.d.report, me);
+            }).catch(function() {
+                el.innerHTML = '<p class="err">Network error. Please try again.</p>';
+            });
+        }
+    </script>
+</body>
+
+</html>

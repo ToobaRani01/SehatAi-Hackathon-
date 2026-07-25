@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Assistant — SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#2563eb', secondary: '#475569' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        #thread {
+            scrollbar-width: thin;
+        }
+
+        .screen-hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans antialiased">
+    <header
+        class="flex-shrink-0 border-b border-slate-100 bg-white px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+            <div
+                class="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+                <span class="material-symbols-outlined text-lg sm:text-xl">smart_toy</span>
+            </div>
+            <div class="min-w-0">
+                <h1 class="text-xs sm:text-sm font-black text-slate-900 truncate">SehatAi Medical Assistant</h1>
+                <p id="session-badge" class="text-[10px] font-semibold text-slate-400 truncate">Set up session…</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-1 flex-shrink-0">
+            <button type="button" onclick="goBackOrClose()"
+                class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-bold text-slate-600 hover:bg-slate-100 px-2 py-2 rounded-xl border border-slate-100 mr-1"
+                title="Go back or close assistant">
+                <span class="material-symbols-outlined text-base">arrow_back</span><span
+                    class="hidden sm:inline">Back</span>
+            </button>
+            <button type="button" onclick="hardRefresh()"
+                class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-bold text-slate-600 hover:bg-slate-100 px-2 py-2 rounded-xl border border-slate-100"
+                title="Restart wizard and clear this screen">
+                <span class="material-symbols-outlined text-base">refresh</span><span
+                    class="hidden sm:inline">Refresh</span>
+            </button>
+            <a href="medical_reports.html" target="_parent"
+                class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-bold text-blue-600 hover:bg-blue-50 px-2 py-2 rounded-xl border border-blue-100">
+                <span class="material-symbols-outlined text-base">description</span><span
+                    class="hidden sm:inline">Saved</span>
+            </a>
+            <a href="dashboard.html" target="_parent"
+                class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-bold text-blue-600 px-2 py-2 rounded-xl border border-blue-100 bg-blue-50/80">
+                <span class="material-symbols-outlined text-base">dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <div id="api-warning" class="hidden bg-amber-50 border-b border-amber-200 px-3 py-2 text-center">
+        <p class="text-[11px] sm:text-xs font-semibold text-amber-900">
+            Gemini API key is not set. Add <code class="bg-amber-100 px-1 rounded">GEMINI_API_KEY</code> to
+            <code class="bg-amber-100 px-1 rounded">backend/chatbot/.env</code> or <code
+                class="bg-amber-100 px-1 rounded">backend/.env</code>,
+            restart the server, then refresh. Key: <a href="https://aistudio.google.com/apikey" target="_blank"
+                rel="noopener" class="text-blue-700 underline font-bold">Google AI Studio</a>
+        </p>
+    </div>
+
+    <!-- Step 1: connect to patients? -->
+    <div id="screen-start" class="flex-1 flex flex-col p-4 sm:p-6 max-w-lg mx-auto w-full justify-center">
+        <div class="rounded-2xl border border-slate-100 bg-white shadow-sm p-6 space-y-4">
+            <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Step 1</p>
+            <h2 class="text-lg font-black text-slate-900 leading-tight">Who is this consultation for?</h2>
+            <p class="text-sm text-slate-600 leading-relaxed">
+                If you need <strong class="text-slate-800">lab / prior scan context</strong> from SehatAi, link one or
+                more patients.
+                Otherwise start a <strong class="text-slate-800">normal chat</strong> with no patient record.
+            </p>
+            <div class="grid gap-3 pt-2">
+                <button type="button" onclick="goPickPatients()"
+                    class="w-full text-left rounded-2xl border-2 border-blue-100 bg-blue-50/50 hover:bg-blue-50 px-4 py-4 transition-colors">
+                    <span class="material-symbols-outlined text-blue-600 align-middle mr-2">biotech</span>
+                    <span class="font-bold text-slate-800">Yes — attach patient / lab context</span>
+                    <span class="block text-xs text-slate-500 mt-1 font-medium">Choose patients, then pick which saved
+                        tests from history to include (or profile only).</span>
+                </button>
+                <button type="button" onclick="startNormalChat()"
+                    class="w-full text-left rounded-2xl border-2 border-slate-100 bg-slate-50/50 hover:bg-slate-50 px-4 py-4 transition-colors">
+                    <span class="material-symbols-outlined text-slate-500 align-middle mr-2">chat</span>
+                    <span class="font-bold text-slate-800">No — normal chat only</span>
+                    <span class="block text-xs text-slate-500 mt-1 font-medium">General questions without linking
+                        patient records.</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: multi-select patients -->
+    <div id="screen-patients" class="screen-hidden flex-1 flex flex-col p-4 max-w-lg mx-auto w-full min-h-0">
+        <div class="flex items-center justify-between mb-3">
+            <button type="button" onclick="backToStart()"
+                class="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> Back
+            </button>
+            <span class="text-[10px] font-black text-slate-400 uppercase">Step 2</span>
+        </div>
+        <h2 class="text-lg font-black text-slate-900 mb-2">Select patient(s)</h2>
+        <p class="text-xs text-slate-500 mb-3">Tick everyone involved. Next you will choose which past tests to use.</p>
+        <div id="patient-list"
+            class="flex-1 overflow-y-auto rounded-2xl border border-slate-100 bg-white divide-y divide-slate-50 min-h-[180px]">
+            <p class="p-6 text-sm text-slate-400 text-center">Loading patients…</p>
+        </div>
+        <button type="button" id="btn-continue-patients" onclick="goPickHistory()" disabled
+            class="mt-4 w-full py-3.5 rounded-2xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-200 disabled:opacity-40 disabled:pointer-events-none">
+            Next: choose lab / test records
+        </button>
+    </div>
+
+    <!-- Step 3: select which history rows -->
+    <div id="screen-history" class="screen-hidden flex-1 flex flex-col p-4 max-w-lg mx-auto w-full min-h-0">
+        <div class="flex items-center justify-between mb-3">
+            <button type="button" onclick="backToPatients()"
+                class="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> Patients
+            </button>
+            <span class="text-[10px] font-black text-slate-400 uppercase">Step 3</span>
+        </div>
+        <h2 class="text-lg font-black text-slate-900 mb-1">What context should the AI use?</h2>
+        <p class="text-xs text-slate-500 mb-3">Tick diagnoses/tests and/or saved prescriptions. Your typed question is sent together with every selection.</p>
+        <div id="history-list"
+            class="flex-1 overflow-y-auto rounded-2xl border border-slate-100 bg-white min-h-[200px] space-y-4 p-3">
+            <p class="p-4 text-sm text-slate-400 text-center">Loading history…</p>
+        </div>
+        <div class="mt-3 grid gap-2">
+            <button type="button" id="btn-continue-history" onclick="confirmHistoryAndChat()" disabled
+                class="w-full py-3.5 rounded-2xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-200 disabled:opacity-40 disabled:pointer-events-none">
+                Chat with selected diagnosis / prescription
+            </button>
+            <button type="button" onclick="startLastVisitChat()"
+                class="w-full py-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100">
+                Chat based on last visit
+            </button>
+            <button type="button" onclick="skipHistoryProfileOnly()"
+                class="w-full py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50">
+                Profile only — demographics + file history (no past tests)
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat -->
+    <div id="screen-chat" class="screen-hidden flex-1 flex flex-col min-h-0">
+        <main id="thread" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+            <div id="welcome"
+                class="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-slate-600 leading-relaxed">
+                <p class="font-bold text-slate-800 mb-1">Session ready</p>
+                <ul class="list-disc pl-4 space-y-1 text-[13px]">
+                    <li>Type your question or case summary. Add an image if needed (X-ray, report photo).</li>
+                    <li>After the AI replies, use <strong class="text-slate-700">Save report</strong> — the same report appears in History, Patients, Dashboard, and AI Reports.</li>
+                </ul>
+            </div>
+        </main>
+        <footer class="flex-shrink-0 border-t border-slate-100 bg-white p-3">
+            <form id="chat-form" class="space-y-2">
+                <div id="preview-wrap"
+                    class="hidden flex items-center gap-2 px-2 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <img id="img-preview" class="h-14 w-14 object-cover rounded-lg border border-slate-200" alt="">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Attachment</p>
+                        <p id="img-name" class="text-xs font-semibold text-slate-700 truncate"></p>
+                    </div>
+                    <button type="button" id="clear-image"
+                        class="p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600">
+                        <span class="material-symbols-outlined text-lg">close</span>
+                    </button>
+                </div>
+                <div class="flex gap-2 items-end">
+                    <label
+                        class="cursor-pointer flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-500 hover:border-blue-200 hover:text-blue-600"
+                        title="Add image">
+                        <span class="material-symbols-outlined">add_photo_alternate</span>
+                        <input type="file" id="file-input" accept="image/png,image/jpeg,image/gif,image/webp"
+                            class="hidden">
+                    </label>
+                    <textarea id="message-input" rows="2" required placeholder="Your clinical question or notes…"
+                        class="flex-1 rounded-xl border-2 border-slate-100 bg-slate-50/50 px-3 py-2.5 text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 resize-none"></textarea>
+                    <button type="submit" id="send-btn"
+                        class="flex-shrink-0 h-11 w-11 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center active:scale-95">
+                        <span class="material-symbols-outlined text-xl">send</span>
+                    </button>
+                </div>
+                <p id="error-line" class="text-xs font-semibold text-red-600 hidden"></p>
+            </form>
+        </footer>
+    </div>
+
+    <script>
+        var sessionMode = null;
+        var contextMode = 'profile_only';
+        var selectedPatientIds = [];
+        var selectedHistoryIds = [];
+        var selectedPrescriptionIds = [];
+        var profileOnlyLab = false;
+        var linkedPatientsForLog = [];
+
+        var thread = document.getElementById('thread');
+        var form = document.getElementById('chat-form');
+        var input = document.getElementById('message-input');
+        var fileInput = document.getElementById('file-input');
+        var previewWrap = document.getElementById('preview-wrap');
+        var imgPreview = document.getElementById('img-preview');
+        var imgName = document.getElementById('img-name');
+        var clearImageBtn = document.getElementById('clear-image');
+        var sendBtn = document.getElementById('send-btn');
+        var errorLine = document.getElementById('error-line');
+
+        fetch('/api/me', { credentials: 'same-origin' }).then(function (r) {
+            if (!r.ok) window.top.location.href = '/';
+            else {
+                fetch('/api/chatbot/status', { credentials: 'same-origin' })
+                    .then(function (res) { return res.json(); })
+                    .then(function (st) {
+                        if (st && st.api_configured === false) {
+                            document.getElementById('api-warning').classList.remove('hidden');
+                        }
+                    })
+                    .catch(function () { });
+                initChatFromUrl();
+            }
+        }).catch(function () { });
+
+        function initChatFromUrl() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var autoPatientId = urlParams.get('auto_patient_id');
+            var skipToChat = urlParams.get('skip_to_chat');
+            var promptRecent = urlParams.get('prompt_recent');
+
+            if (autoPatientId) {
+                var pid = parseInt(autoPatientId, 10);
+                selectedPatientIds = [pid];
+                sessionMode = 'lab_context';
+                contextMode = 'profile_only';
+                profileOnlyLab = true;
+                if (skipToChat) {
+                    fetch('/api/patients/' + pid).then(function (r) { return r.json(); }).then(function (data) {
+                        if (data.patient) {
+                            var pname = data.patient.full_name;
+                            linkedPatientsForLog = [{ id: pid, name: pname }];
+                            document.getElementById('session-badge').textContent = 'Profile only: ' + pname;
+                        }
+                    });
+                    hide(document.getElementById('screen-start'));
+                    show(document.getElementById('screen-chat'));
+                } else {
+                    fetch('/api/patients/' + pid).then(function (r) { return r.json(); }).then(function (data) {
+                        if (data.patient) {
+                            linkedPatientsForLog = [{ id: pid, name: data.patient.full_name }];
+                        }
+                    });
+                    hide(document.getElementById('screen-start'));
+                    hide(document.getElementById('screen-patients'));
+                    goPickHistory(true);
+                }
+            } else if (promptRecent) {
+                fetch('/api/history').then(function (r) { return r.json(); }).then(function (data) {
+                    var records = data.history || [];
+                    if (records.length > 0) {
+                        var recent = records[0];
+                        if (confirm("Do you want to chat related to your recent diagnosis for " + recent.patient_name + "?")) {
+                            selectedPatientIds = [recent.patient_db_id];
+                            sessionMode = 'lab_context';
+                            contextMode = 'last_visit';
+                            profileOnlyLab = false;
+                            linkedPatientsForLog = [{ id: recent.patient_db_id, name: recent.patient_name }];
+                            document.getElementById('session-badge').textContent = 'Last visit: ' + recent.patient_name;
+                            hide(document.getElementById('screen-start'));
+                            show(document.getElementById('screen-chat'));
+                        }
+                    }
+                }).catch(function () { });
+            }
+        }
+
+        function show(el) { el.classList.remove('screen-hidden'); }
+        function hide(el) { el.classList.add('screen-hidden'); }
+
+        function hardRefresh() {
+            window.location.reload();
+        }
+
+        function goPickPatients() {
+            hide(document.getElementById('screen-start'));
+            show(document.getElementById('screen-patients'));
+            loadPatientCheckboxes();
+        }
+
+        function backToStart() {
+            hide(document.getElementById('screen-patients'));
+            hide(document.getElementById('screen-history'));
+            show(document.getElementById('screen-start'));
+        }
+
+        function backToPatients() {
+            hide(document.getElementById('screen-history'));
+            show(document.getElementById('screen-patients'));
+        }
+
+        function startNormalChat() {
+            sessionMode = 'normal';
+            contextMode = 'profile_only';
+            selectedPatientIds = [];
+            selectedHistoryIds = [];
+            selectedPrescriptionIds = [];
+            profileOnlyLab = false;
+            document.getElementById('session-badge').textContent = 'Normal chat (no linked patients)';
+            hide(document.getElementById('screen-start'));
+            hide(document.getElementById('screen-patients'));
+            hide(document.getElementById('screen-history'));
+            show(document.getElementById('screen-chat'));
+        }
+
+        function loadPatientCheckboxes() {
+            var box = document.getElementById('patient-list');
+            var preselected = selectedPatientIds.slice();
+            box.innerHTML = '<p class="p-6 text-sm text-slate-400 text-center">Loading…</p>';
+            fetch('/api/patients', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (data) {
+                var patients = data.patients || [];
+                if (patients.length === 0) {
+                    box.innerHTML = '<p class="p-6 text-sm text-slate-500 text-center">No patients yet. Register patients first or use normal chat.</p>';
+                    return;
+                }
+                box.innerHTML = patients.map(function (p) {
+                    var dbId = Number(p.id);
+                    var pname = String(p.full_name || '').replace(/"/g, '&quot;');
+                    var mrn = escapeHtml(p.patient_id != null ? String(p.patient_id) : '—');
+                    var ageVal = p.age != null ? escapeHtml(String(p.age)) : '—';
+                    var genderVal = p.gender != null ? escapeHtml(String(p.gender)) : '—';
+                    var checked = preselected.indexOf(dbId) >= 0 ? ' checked' : '';
+                    return '<label class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0">' +
+                        '<input type="checkbox" class="patient-cb mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500" value="' + dbId + '" data-pname="' + pname + '"' + checked + '>' +
+                        '<div class="min-w-0 flex-1">' +
+                        '<span class="font-bold text-slate-800 text-sm block truncate">' + escapeHtml(p.full_name) + '</span>' +
+                        '<div class="grid grid-cols-3 gap-2 mt-1.5 text-[10px] font-bold uppercase tracking-wide">' +
+                        '<span class="text-slate-400">ID <span class="text-blue-600 normal-case tracking-normal">' + mrn + '</span></span>' +
+                        '<span class="text-slate-400">Age <span class="text-slate-700 normal-case tracking-normal">' + ageVal + '</span></span>' +
+                        '<span class="text-slate-400">Gender <span class="text-slate-700 normal-case tracking-normal">' + genderVal + '</span></span>' +
+                        '</div></div></label>';
+                }).join('');
+                box.querySelectorAll('.patient-cb').forEach(function (cb) {
+                    cb.addEventListener('change', updateContinueEnabled);
+                });
+                updateContinueEnabled();
+            }).catch(function () {
+                box.innerHTML = '<p class="p-6 text-sm text-red-500 text-center">Could not load patients.</p>';
+            });
+        }
+
+        function escapeHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function updateContinueEnabled() {
+            var any = document.querySelectorAll('.patient-cb:checked').length > 0;
+            document.getElementById('btn-continue-patients').disabled = !any;
+        }
+
+        function refreshLinkedPatientsForLog() {
+            linkedPatientsForLog = [];
+            document.querySelectorAll('.patient-cb:checked').forEach(function (cb) {
+                linkedPatientsForLog.push({
+                    id: parseInt(cb.value, 10),
+                    name: cb.getAttribute('data-pname') || ('Patient #' + cb.value)
+                });
+            });
+        }
+
+        function goPickHistory(keepPreselected) {
+            var preserved = keepPreselected ? selectedPatientIds.slice() : [];
+            selectedPatientIds = [];
+            document.querySelectorAll('.patient-cb:checked').forEach(function (cb) {
+                selectedPatientIds.push(parseInt(cb.value, 10));
+            });
+            if (selectedPatientIds.length === 0 && preserved.length) {
+                selectedPatientIds = preserved;
+            }
+            if (selectedPatientIds.length === 0) return;
+            refreshLinkedPatientsForLog();
+            sessionMode = 'lab_context';
+            profileOnlyLab = false;
+            contextMode = 'tests';
+            selectedHistoryIds = [];
+            selectedPrescriptionIds = [];
+            hide(document.getElementById('screen-patients'));
+            show(document.getElementById('screen-history'));
+            loadHistoryForSelection();
+        }
+
+        function updateHistoryContinueEnabled() {
+            var nHist = document.querySelectorAll('.history-cb:checked').length;
+            var nPresc = document.querySelectorAll('.prescription-cb:checked').length;
+            document.getElementById('btn-continue-history').disabled = (nHist + nPresc) === 0;
+        }
+
+        function patientDemographicsBar(p) {
+            var mrn = escapeHtml(p.patient_id != null ? String(p.patient_id) : '—');
+            var ageVal = p.age != null ? escapeHtml(String(p.age)) : '—';
+            var genderVal = p.gender != null ? escapeHtml(String(p.gender)) : '—';
+            return '<div class="px-3 py-2 bg-slate-100/80 border-b border-slate-100">' +
+                '<span class="text-xs font-black text-slate-700">' + escapeHtml(p.full_name) + '</span>' +
+                '<div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">' +
+                '<span>ID <span class="text-blue-600 normal-case tracking-normal">' + mrn + '</span></span>' +
+                '<span>Age <span class="text-slate-600 normal-case tracking-normal">' + ageVal + '</span></span>' +
+                '<span>Gender <span class="text-slate-600 normal-case tracking-normal">' + genderVal + '</span></span>' +
+                '</div></div>';
+        }
+
+        function loadHistoryForSelection() {
+            var box = document.getElementById('history-list');
+            box.innerHTML = '<p class="p-4 text-sm text-slate-400 text-center">Loading…</p>';
+            var patientIdsParam = selectedPatientIds.join(',');
+            Promise.all(selectedPatientIds.map(function (pid) {
+                return Promise.all([
+                    fetch('/api/patients/' + pid, { credentials: 'same-origin' }).then(function (r) { return r.json(); }),
+                    fetch('/api/patients/' + pid + '/history', { credentials: 'same-origin' }).then(function (r) { return r.json(); })
+                ]).then(function (pair) {
+                    return { patient: pair[0].patient, history: (pair[1].history || []), pid: pid };
+                }).catch(function () {
+                    return { patient: null, history: [], pid: pid };
+                });
+            }).concat([
+                fetch('/api/patients/prescriptions?patient_ids=' + encodeURIComponent(patientIdsParam), { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) { return { prescriptions: d.prescriptions || [] }; })
+                    .catch(function () { return { prescriptions: [] }; })
+            ])).then(function (results) {
+                var prescBundle = results.pop();
+                var allPrescriptions = prescBundle.prescriptions || [];
+                var bundles = results;
+                var html = '';
+
+                html += '<p class="text-[10px] font-black text-blue-600 uppercase tracking-widest px-1 pt-1">Diagnoses &amp; tests</p>';
+                bundles.forEach(function (b) {
+                    if (!b.patient) return;
+                    var diagRows = (b.history || []).filter(function (h) {
+                        return h.diagnosis_type !== 'ai_chat' || !h.medical_report_id;
+                    });
+                    html += '<div class="rounded-xl border border-slate-100 bg-slate-50/50 overflow-hidden mb-3">';
+                    html += patientDemographicsBar(b.patient);
+                    if (!diagRows.length) {
+                        html += '<p class="p-3 text-xs text-slate-500">No scan/diagnosis records yet.</p>';
+                    } else {
+                        diagRows.forEach(function (h) {
+                            var conf = ((h.confidence != null ? Number(h.confidence) : 0) * 100).toFixed(1);
+                            var type = escapeHtml(h.diagnosis_type || '');
+                            var res = escapeHtml(h.result || '');
+                            var dt = escapeHtml(h.created_at || '');
+                            var linkHint = h.referenced_history_ids ? ' · linked #' + escapeHtml(String(h.referenced_history_ids)) : '';
+                            html += '<label class="flex gap-3 items-start px-3 py-2.5 border-b border-slate-50 last:border-0 hover:bg-white cursor-pointer">';
+                            html += '<input type="checkbox" class="history-cb mt-0.5 rounded border-slate-300 text-blue-600" value="' + h.id + '">';
+                            html += '<div class="min-w-0 text-xs"><span class="font-bold text-slate-800">' + type + '</span>';
+                            html += ' <span class="text-slate-500">→</span> <span class="font-semibold text-slate-700">' + res + '</span>';
+                            html += '<span class="block text-[10px] text-slate-400 mt-0.5">' + dt + ' · ' + conf + '%' + linkHint + '</span></div></label>';
+                        });
+                    }
+                    html += '</div>';
+                });
+
+                html += '<p class="text-[10px] font-black text-violet-600 uppercase tracking-widest px-1 pt-2">Saved prescriptions</p>';
+                bundles.forEach(function (b) {
+                    if (!b.patient) return;
+                    var pid = Number(b.patient.id);
+                    var patientPresc = allPrescriptions.filter(function (pr) {
+                        return (pr.patient_ids || []).indexOf(pid) >= 0;
+                    });
+                    html += '<div class="rounded-xl border border-violet-100 bg-violet-50/30 overflow-hidden mb-3">';
+                    html += patientDemographicsBar(b.patient);
+                    if (!patientPresc.length) {
+                        html += '<p class="p-3 text-xs text-slate-500">No saved prescriptions yet. Save from chat after an AI reply.</p>';
+                    } else {
+                        patientPresc.forEach(function (pr) {
+                            var summary = escapeHtml(pr.summary || 'Prescription');
+                            var dt = escapeHtml(pr.created_at || '');
+                            var linkHint = pr.referenced_history_ids ? ' · linked #' + escapeHtml(String(pr.referenced_history_ids)) : '';
+                            html += '<label class="flex gap-3 items-start px-3 py-2.5 border-b border-violet-50 last:border-0 hover:bg-white cursor-pointer">';
+                            html += '<input type="checkbox" class="prescription-cb mt-0.5 rounded border-violet-300 text-violet-600" value="' + pr.id + '">';
+                            html += '<div class="min-w-0 text-xs"><span class="font-bold text-violet-900">Report #' + pr.id + '</span>';
+                            html += ' <span class="text-slate-500">→</span> <span class="font-semibold text-slate-700">' + summary + '</span>';
+                            html += '<span class="block text-[10px] text-slate-400 mt-0.5">' + dt + linkHint + '</span></div></label>';
+                        });
+                    }
+                    html += '</div>';
+                });
+
+                if (!html) {
+                    box.innerHTML = '<p class="p-4 text-sm text-amber-700 text-center">Could not load patients.</p>';
+                    return;
+                }
+                box.innerHTML = html;
+                box.querySelectorAll('.history-cb, .prescription-cb').forEach(function (cb) {
+                    cb.addEventListener('change', updateHistoryContinueEnabled);
+                });
+                updateHistoryContinueEnabled();
+            }).catch(function () {
+                box.innerHTML = '<p class="p-4 text-sm text-red-500 text-center">Failed to load history.</p>';
+            });
+        }
+
+        function confirmHistoryAndChat() {
+            selectedHistoryIds = [];
+            selectedPrescriptionIds = [];
+            profileOnlyLab = false;
+            refreshLinkedPatientsForLog();
+            document.querySelectorAll('.history-cb:checked').forEach(function (cb) {
+                selectedHistoryIds.push(parseInt(cb.value, 10));
+            });
+            document.querySelectorAll('.prescription-cb:checked').forEach(function (cb) {
+                selectedPrescriptionIds.push(parseInt(cb.value, 10));
+            });
+            if (selectedHistoryIds.length === 0 && selectedPrescriptionIds.length === 0) return;
+            if (selectedHistoryIds.length && selectedPrescriptionIds.length) {
+                contextMode = 'mixed';
+            } else if (selectedPrescriptionIds.length) {
+                contextMode = 'prescriptions';
+            } else {
+                contextMode = 'tests';
+            }
+            var names = [];
+            document.querySelectorAll('.patient-cb:checked').forEach(function (cb) {
+                names.push(cb.getAttribute('data-pname') || ('Patient #' + cb.value));
+            });
+            var badge = 'Linked: ' + names.slice(0, 2).join(', ') + (names.length > 2 ? ' +' + (names.length - 2) : '');
+            if (selectedHistoryIds.length) badge += ' · ' + selectedHistoryIds.length + ' diagnosis/test(s)';
+            if (selectedPrescriptionIds.length) badge += ' · ' + selectedPrescriptionIds.length + ' prescription(s)';
+            document.getElementById('session-badge').textContent = badge;
+            hide(document.getElementById('screen-history'));
+            show(document.getElementById('screen-chat'));
+        }
+
+        function skipHistoryProfileOnly() {
+            profileOnlyLab = true;
+            contextMode = 'profile_only';
+            selectedHistoryIds = [];
+            selectedPrescriptionIds = [];
+            refreshLinkedPatientsForLog();
+            var names = [];
+            document.querySelectorAll('.patient-cb:checked').forEach(function (cb) {
+                names.push(cb.getAttribute('data-pname') || ('Patient #' + cb.value));
+            });
+            document.getElementById('session-badge').textContent = 'Profile only: ' + (names.slice(0, 2).join(', ') + (names.length > 2 ? ' +' + (names.length - 2) : ''));
+            hide(document.getElementById('screen-history'));
+            show(document.getElementById('screen-chat'));
+        }
+
+        function startLastVisitChat() {
+            profileOnlyLab = false;
+            contextMode = 'last_visit';
+            selectedHistoryIds = [];
+            selectedPrescriptionIds = [];
+            refreshLinkedPatientsForLog();
+            var names = [];
+            document.querySelectorAll('.patient-cb:checked').forEach(function (cb) {
+                names.push(cb.getAttribute('data-pname') || ('Patient #' + cb.value));
+            });
+            document.getElementById('session-badge').textContent = 'Last visit: ' + (names.slice(0, 2).join(', ') + (names.length > 2 ? ' +' + (names.length - 2) : ''));
+            hide(document.getElementById('screen-history'));
+            show(document.getElementById('screen-chat'));
+        }
+
+        function userBubble(text) {
+            var wrap = document.createElement('div');
+            wrap.className = 'flex justify-end';
+            var inner = document.createElement('div');
+            inner.className = 'max-w-[92%] rounded-2xl rounded-br-md bg-blue-600 text-white px-4 py-3 text-sm font-medium shadow-md whitespace-pre-wrap';
+            inner.textContent = text;
+            wrap.appendChild(inner);
+            thread.appendChild(wrap);
+            thread.scrollTop = thread.scrollHeight;
+        }
+
+        function fillPatientSelectForLog(sel) {
+            sel.innerHTML = '';
+            var ph = document.createElement('option');
+            ph.value = '';
+            ph.textContent = linkedPatientsForLog.length ? 'Patient for timeline…' : 'Loading patients…';
+            sel.appendChild(ph);
+            if (linkedPatientsForLog.length) {
+                linkedPatientsForLog.forEach(function (p) {
+                    var o = document.createElement('option');
+                    o.value = String(p.id);
+                    o.textContent = p.name;
+                    sel.appendChild(o);
+                });
+                ph.textContent = 'Patient for timeline…';
+                return;
+            }
+            fetch('/api/patients', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (data) {
+                sel.innerHTML = '';
+                var o0 = document.createElement('option');
+                o0.value = '';
+                o0.textContent = 'Choose patient…';
+                sel.appendChild(o0);
+                (data.patients || []).forEach(function (p) {
+                    var o = document.createElement('option');
+                    o.value = String(p.id);
+                    o.textContent = p.full_name + ' (' + p.patient_id + ')';
+                    sel.appendChild(o);
+                });
+            }).catch(function () {
+                ph.textContent = 'Could not load patients';
+            });
+        }
+
+        function assistantCard(aiRaw, replyText, userQuery, imageFile) {
+            var wrap = document.createElement('div');
+            wrap.className = 'flex justify-start';
+            var card = document.createElement('div');
+            card.className = 'max-w-[95%] w-full rounded-2xl rounded-bl-md bg-white border border-slate-200 shadow-sm p-3 space-y-2';
+            card.dataset.aiRaw = aiRaw;
+            card.dataset.userQuery = userQuery || '';
+            card._chatImageFile = imageFile || null;
+
+            var ta = document.createElement('textarea');
+            ta.rows = 12;
+            ta.className = 'w-full rounded-xl border-2 border-slate-100 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 font-medium leading-relaxed focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 resize-y min-h-[200px]';
+            ta.value = replyText;
+
+            var row = document.createElement('div');
+            row.className = 'flex flex-wrap items-center gap-2';
+            var saveBtn = document.createElement('button');
+            saveBtn.type = 'button';
+            saveBtn.className = 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black uppercase tracking-wide shadow-md hover:bg-emerald-700';
+            saveBtn.innerHTML = '<span class="material-symbols-outlined text-base">save</span> Save report';
+            var status = document.createElement('span');
+            status.className = 'text-xs font-semibold text-slate-400';
+
+            saveBtn.addEventListener('click', function () {
+                status.textContent = 'Saving…';
+                status.className = 'text-xs font-semibold text-slate-500';
+
+                var fd = new FormData();
+                fd.append('ai_raw', card.dataset.aiRaw || '');
+                fd.append('doctor_final', ta.value);
+                fd.append('mode', sessionMode || 'normal');
+                fd.append('patient_ids', selectedPatientIds.join(','));
+                fd.append('user_query', card.dataset.userQuery || '');
+                if (selectedHistoryIds.length) {
+                    fd.append('referenced_history_ids', selectedHistoryIds.join(','));
+                }
+                if (selectedPrescriptionIds.length) {
+                    fd.append('prescription_ids', selectedPrescriptionIds.join(','));
+                }
+                if (card._chatImageFile) {
+                    fd.append('image', card._chatImageFile);
+                }
+
+                fetch('/api/medical-reports', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); }).then(function (x) {
+                    if (x.ok) {
+                        status.textContent = 'Saved to report & history · ID ' + x.d.id;
+                        status.className = 'text-xs font-semibold text-emerald-600';
+                        
+                        var viewBtnId = 'view-report-btn-' + x.d.id;
+                        if (!document.getElementById(viewBtnId)) {
+                            var viewBtn = document.createElement('button');
+                            viewBtn.id = viewBtnId;
+                            viewBtn.type = 'button';
+                            viewBtn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-black uppercase tracking-wide shadow-md hover:bg-blue-700 ml-2 transition-all active:scale-95';
+                            viewBtn.innerHTML = '<span class="material-symbols-outlined text-sm">visibility</span> View Report';
+                            viewBtn.addEventListener('click', function() {
+                                window.open('/medical_report_print.html?id=' + x.d.id, '_blank');
+                            });
+                            row.appendChild(viewBtn);
+                        }
+                    } else {
+                        status.textContent = x.d.error || 'Save failed';
+                        status.className = 'text-xs font-semibold text-red-600';
+                    }
+                }).catch(function () {
+                    status.textContent = 'Network error';
+                    status.className = 'text-xs font-semibold text-red-600';
+                });
+            });
+
+            row.appendChild(saveBtn);
+            row.appendChild(status);
+            card.appendChild(ta);
+            card.appendChild(row);
+            wrap.appendChild(card);
+            thread.appendChild(wrap);
+            thread.scrollTop = thread.scrollHeight;
+        }
+
+        function showError(msg) {
+            var wrap = document.createElement('div');
+            wrap.className = 'rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 mx-4 sm:mx-0 shadow-sm';
+            wrap.innerHTML = '<div class="flex items-center gap-2 mb-2"><span class="material-symbols-outlined text-red-600">error</span><span class="font-black text-red-800">Connection Error</span></div><p class="text-[13px] leading-relaxed">' + escapeHtml(msg).replace(/\\n/g, '<br>') + '</p>';
+            thread.appendChild(wrap);
+            thread.scrollTop = thread.scrollHeight;
+            errorLine.classList.add('hidden');
+        }
+        function hideError() {
+            errorLine.classList.add('hidden');
+        }
+
+        fileInput.addEventListener('change', function () {
+            var f = fileInput.files && fileInput.files[0];
+            if (!f) { previewWrap.classList.add('hidden'); return; }
+            imgName.textContent = f.name;
+            imgPreview.src = URL.createObjectURL(f);
+            previewWrap.classList.remove('hidden');
+        });
+        clearImageBtn.addEventListener('click', function () {
+            fileInput.value = '';
+            previewWrap.classList.add('hidden');
+            imgPreview.removeAttribute('src');
+        });
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            if (!sessionMode) {
+                showError('Complete session setup first.');
+                return;
+            }
+            hideError();
+            var msg = input.value.trim();
+            if (!msg) return;
+
+            var welcome = document.getElementById('welcome');
+            if (welcome) welcome.remove();
+
+            var hasFile = fileInput.files && fileInput.files[0];
+            userBubble(hasFile ? msg + '\n\n[Image attached]' : msg);
+
+            var fd = new FormData();
+            fd.append('message', msg);
+            if (hasFile) fd.append('image', fileInput.files[0]);
+            if (sessionMode === 'lab_context' && selectedPatientIds.length) {
+                fd.append('lab_context', '1');
+                fd.append('patient_ids', selectedPatientIds.join(','));
+                fd.append('context_mode', contextMode || 'profile_only');
+                if (selectedHistoryIds.length) {
+                    fd.append('history_ids', selectedHistoryIds.join(','));
+                }
+                if (selectedPrescriptionIds.length) {
+                    fd.append('prescription_ids', selectedPrescriptionIds.join(','));
+                }
+                if (contextMode === 'profile_only') {
+                    fd.append('profile_only_lab', '1');
+                }
+            } else {
+                fd.append('lab_context', '0');
+            }
+
+            input.value = '';
+            sendBtn.disabled = true;
+            var aiRawForCard = '';
+
+            try {
+                var res = await fetch('/api/chatbot', { method: 'POST', body: fd, credentials: 'same-origin' });
+                var data = await res.json().catch(function () { return {}; });
+                if (!res.ok) {
+                    showError(data.error || 'Request failed.');
+                    return;
+                }
+                aiRawForCard = data.reply || '';
+                var imgF = hasFile ? fileInput.files[0] : null;
+                assistantCard(aiRawForCard, aiRawForCard, msg, imgF);
+            } catch (err) {
+                showError('Network error.');
+            } finally {
+                sendBtn.disabled = false;
+                clearImageBtn.click();
+            }
+        });
+
+        function goBackOrClose() {
+            if (window.parent && typeof window.parent.closeChatDrawer === 'function') {
+                window.parent.closeChatDrawer();
+            } else if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'dashboard.html';
+            }
+        }
+    </script>
+</body>
+
+</html>

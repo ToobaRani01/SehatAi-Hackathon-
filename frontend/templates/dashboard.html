@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Doctor Command Center Dashboard - SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#475569',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar-item-active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-right: 4px solid #2563eb;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .active-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Patient Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 32px;
+            width: 100%;
+            max-width: 720px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+        }
+
+        /* Timeline Card */
+        .timeline-item {
+            position: relative;
+            padding-left: 48px;
+            padding-bottom: 32px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 32px;
+            bottom: 0;
+            width: 2px;
+            background: #e2e8f0;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .edit-notes-area {
+            width: 100%;
+            height: 80px;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .edit-notes-area:focus {
+            border-color: #2563eb;
+        }
+
+        /* Floating chat — bottom-right */
+        .chat-drawer {
+            position: fixed;
+            z-index: 115;
+            right: 1.5rem;
+            left: auto;
+            bottom: 6.25rem;
+            width: min(600px, calc(100vw - 3rem));
+            height: min(750px, calc(100vh - 8rem));
+            display: flex;
+            flex-direction: column;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.2);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-drawer.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .report-drawer {
+            position: fixed;
+            z-index: 130;
+            right: 1.5rem;
+            left: auto;
+            bottom: 1.5rem;
+            width: min(650px, calc(100vw - 3rem));
+            height: calc(100vh - 3rem);
+            display: flex;
+            flex-direction: column;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(20px);
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .report-drawer.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .chat-fab {
+            position: fixed;
+            z-index: 120;
+            right: 1.5rem;
+            left: auto;
+            bottom: 1.5rem;
+            width: 4.25rem;
+            height: 4.25rem;
+            border-radius: 1.15rem;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.45);
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .chat-fab:hover {
+            background: #1d4ed8;
+            transform: scale(1.05);
+        }
+
+        .chat-fab:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+
+<body class="flex min-h-screen">
+
+    <!-- Patient Detail Modal -->
+    <div id="patient-modal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
+        <div class="modal-box">
+            <!-- Modal Header -->
+            <div class="p-8 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-5">
+                    <div id="modal-avatar"
+                        class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">
+                        --</div>
+                    <div>
+                        <h3 id="modal-name" class="text-2xl font-bold text-slate-800">Patient Name</h3>
+                        <p id="modal-meta" class="text-sm text-slate-400 font-medium">P-00000 • Age 0 • Gender</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()"
+                    class="w-10 h-10 rounded-2xl bg-transparent hover:bg-red-50 text-slate-400 hover:text-red-600 flex items-center justify-center transition-all group">
+                    <span
+                        class="material-symbols-outlined text-lg group-hover:rotate-90 transition-transform">close</span>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-8 space-y-8">
+                <!-- Patient Info Card -->
+                <div class="bg-white rounded-3xl p-6 grid grid-cols-2 gap-6 border border-slate-100 shadow-sm">
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">contact_phone</span> Contact
+                        </p>
+                        <p id="modal-contact" class="text-sm font-semibold text-slate-700">—</p>
+                    </div>
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">event</span> Registered
+                        </p>
+                        <p id="modal-registered" class="text-sm font-semibold text-slate-700">—</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">history_edu</span> Medical History
+                        </p>
+                        <p id="modal-med-history" class="text-sm font-medium text-slate-600 leading-relaxed">—</p>
+                    </div>
+                </div>
+
+                <!-- Snapshot Stats -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-blue-50 rounded-2xl p-5 border border-blue-100 text-center">
+                        <p id="modal-total" class="text-3xl font-black text-blue-600">0</p>
+                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-wider mt-1">
+                            Total Scans</p>
+                    </div>
+                    <div class="bg-red-50 rounded-2xl p-5 border border-red-100 text-center">
+                        <p id="modal-pneumonia" class="text-3xl font-black text-red-600">0</p>
+                        <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider mt-1">
+                            Pneumonia</p>
+                    </div>
+                    <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 text-center">
+                        <p id="modal-normal" class="text-3xl font-black text-emerald-600">0</p>
+                        <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mt-1">
+                            Normal</p>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Pipeline -->
+                <div class="space-y-4">
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">clinical_notes</span> Clinical Analysis Pipeline
+                    </h4>
+                    <select id="diagnosis-type-select"
+                        class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer">
+                        <option value="pneumonia">Chest X-Ray: Pneumonia Detection</option>
+                        <option value="stroke">Stroke Risk: Biometric Assessment</option>
+                        <option value="skin">Skin Disease Identification</option>
+                    </select>
+                </div>
+
+                <!-- Timeline Section -->
+                <div class="space-y-6">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Clinical
+                        History Timeline</h4>
+                    <div id="modal-timeline" class="space-y-1">
+                        <p class="text-sm text-slate-400 text-center py-12 font-medium">No diagnostic records on file.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-8 border-t border-slate-100 bg-slate-50/50 grid grid-cols-2 gap-4 flex-shrink-0">
+                <button onclick="askAIChatbot()"
+                    class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-100 px-6 py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-3 transition-all active:scale-95 group">
+                    <span
+                        class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">smart_toy</span>
+                    Consult AI Chatbot
+                </button>
+                <button onclick="startNewDiagnosis()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-blue-200">
+                    <span class="material-symbols-outlined text-xl">biotech</span> Start New Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-white border-r border-slate-100 flex flex-col fixed h-full z-10">
+        <div class="p-8 pb-10 flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-lg active-icon">shield_with_house</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="dashboard.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg sidebar-item-active">
+                <span class="material-symbols-outlined active-icon">grid_view</span> Dashboard
+            </a>
+            <a href="patients.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">group</span> Patients
+            </a>
+            <a href="diagnostics.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">stethoscope</span> Diagnostics
+            </a>
+            <a href="history.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">history</span> History
+            </a>
+            <a href="medical_reports.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">description</span> AI Reports
+            </a>
+            <a href="profile.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">person</span> Profile
+            </a>
+        </nav>
+        <div class="p-6 border-t border-slate-50">
+            <a href="#" onclick="doLogout()"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors">
+                <span class="material-symbols-outlined">logout</span> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="flex-1 ml-64 p-12 overflow-y-auto">
+        <header class="mb-10 flex justify-between items-end">
+            <div>
+                <p class="text-blue-600 font-bold text-xs uppercase tracking-widest mb-1">Med-Tech Hub</p>
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">Clinical Overview</h2>
+            </div>
+            <div class="flex items-center gap-3 bg-white p-2 border border-slate-100 rounded-2xl shadow-sm">
+                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600">
+                    <span class="material-symbols-outlined text-lg">calendar_today</span>
+                </div>
+                <div class="pr-4">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Current Session</p>
+                    <p id="curr-date" class="text-xs font-black text-slate-800 leading-none">April 04, 2026</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div
+                class="bg-blue-600 rounded-3xl p-7 text-white shadow-xl shadow-blue-200 flex flex-col justify-between h-44 relative overflow-hidden group">
+                <div class="z-10">
+                    <p class="text-blue-100 text-xs font-bold uppercase tracking-wider">Total Patients</p>
+                    <h3 id="stat-patients" class="text-4xl font-black mt-2">0</h3>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold text-blue-100 z-10">
+                    <span class="material-symbols-outlined text-sm">trending_up</span> Registered in system
+                </div>
+                <div
+                    class="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform">
+                </div>
+            </div>
+            <div
+                class="bg-emerald-500 rounded-3xl p-7 text-white shadow-xl shadow-emerald-200 flex flex-col justify-between h-44 relative overflow-hidden group">
+                <div class="z-10">
+                    <p class="text-emerald-50 text-xs font-bold uppercase tracking-wider">Normal Results</p>
+                    <h3 id="stat-normal" class="text-4xl font-black mt-2">0</h3>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold text-emerald-50 z-10">
+                    <span class="material-symbols-outlined text-sm">check_circle</span> Stable findings
+                </div>
+                <div
+                    class="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform">
+                </div>
+            </div>
+            <div
+                class="bg-orange-500 rounded-3xl p-7 text-white shadow-xl shadow-orange-200 flex flex-col justify-between h-44 relative overflow-hidden group">
+                <div class="z-10">
+                    <p class="text-orange-50 text-xs font-bold uppercase tracking-wider">Diagnostics Run</p>
+                    <h3 id="stat-diagnostics" class="text-4xl font-black mt-2">0</h3>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold text-orange-50 z-10">
+                    <span class="material-symbols-outlined text-sm">leaderboard</span> Total iterations
+                </div>
+                <div
+                    class="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-110 transition-transform">
+                </div>
+            </div>
+            <a href="add_patient.html"
+                class="bg-white rounded-3xl p-7 text-slate-800 border border-slate-100 shadow-xl shadow-slate-100 flex flex-col items-center justify-center gap-4 transition-all hover:-translate-y-1 active:scale-95 group">
+                <div
+                    class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-3xl">add_circle</span>
+                </div>
+                <span class="text-sm font-black uppercase tracking-widest">Enroll Patient</span>
+            </a>
+        </div>
+
+        <!-- History Table -->
+        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-2xl shadow-slate-200 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-slate-800">Diagnostic History</h3>
+                <a href="history.html"
+                    class="text-blue-600 text-sm font-bold border-2 border-blue-50 px-4 py-2 rounded-xl hover:bg-blue-600 hover:text-white transition-all">History</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-100">
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Medical Entity</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Diagnostic Class</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                Finding</th>
+                            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                P-Value/Conf</th>
+                            <th
+                                class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">
+                                Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-diagnostics-body" class="divide-y divide-slate-50">
+                        <!-- Content via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Medical assistant drawer + floating chat control -->
+    <div id="chat-drawer" class="chat-drawer" aria-hidden="true">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80 flex-shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-blue-600 text-xl">chat</span>
+                <span class="text-sm font-black text-slate-800 truncate">Assistant</span>
+            </div>
+            <button type="button" onclick="closeChatDrawer()"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-700 transition-colors"
+                aria-label="Close chat">
+                <span class="material-symbols-outlined">expand_more</span>
+            </button>
+        </div>
+        <iframe id="chat-iframe" class="flex-1 w-full min-h-0 border-0 bg-slate-50" title="SehatAi chat"
+            src="about:blank"></iframe>
+    </div>
+    <button type="button" id="chat-fab" class="chat-fab" onclick="toggleChatDrawer()" aria-label="Open medical chat">
+        <span class="material-symbols-outlined text-4xl leading-none"
+            style="font-variation-settings: 'FILL' 1;">chat</span>
+    </button>
+
+    <!-- Report Preview Drawer -->
+    <div id="report-drawer" class="report-drawer" aria-hidden="true">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80 flex-shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-blue-600 text-xl">description</span>
+                <span class="text-sm font-black text-slate-800 truncate">AI Scan Report</span>
+            </div>
+            <div class="flex gap-1">
+                <button type="button" onclick="printReportDrawerContent()"
+                    class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-700 transition-colors"
+                    aria-label="Print report">
+                    <span class="material-symbols-outlined text-[20px]">print</span>
+                </button>
+                <button type="button" onclick="closeReportDrawer()"
+                    class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-700 transition-colors"
+                    aria-label="Close report">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+        </div>
+        <iframe id="report-iframe" class="flex-1 w-full min-h-0 border-0 bg-white" title="Scan Report"></iframe>
+    </div>
+
+    <script>
+        let currentEditingPatientId = null;
+        let cachedMe = null;
+        async function getMe() {
+            if (cachedMe) return cachedMe;
+            try {
+                const res = await fetch('/api/me');
+                if (res.ok) {
+                    cachedMe = await res.json();
+                    return cachedMe;
+                }
+            } catch (e) {}
+            return null;
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const [pRes, hRes] = await Promise.all([fetch('/api/patients'), fetch('/api/history')]);
+                const patients = (await pRes.json()).patients || [];
+                const history = (await hRes.json()).history || [];
+                document.getElementById('stat-patients').textContent = patients.length;
+                document.getElementById('stat-diagnostics').textContent = history.length;
+                document.getElementById('stat-normal').textContent = history.filter(x => x.result === 'normal').length;
+                document.getElementById('curr-date').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: '2-digit', year: 'numeric' });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadRecentDiagnostics() {
+            try {
+                const res = await fetch('/api/history');
+                const data = await res.json();
+                const records = data.history || [];
+                const patientMap = new Map();
+                records.forEach(r => { if (!patientMap.has(r.patient_db_id)) { patientMap.set(r.patient_db_id, { ...r, scan_count: records.filter(x => x.patient_db_id === r.patient_db_id).length }); } });
+                const grouped = Array.from(patientMap.values()).slice(0, 8);
+                const tbody = document.getElementById('recent-diagnostics-body');
+                if (grouped.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="px-8 py-20 text-center font-bold text-slate-400">Zero entries found in database.</td></tr>`; return; }
+
+                tbody.innerHTML = grouped.map(r => `
+                    <tr class="hover:bg-slate-50/50 transition-all group">
+                        <td class="px-8 py-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-700 font-black text-xs group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">${r.patient_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}</div>
+                                <div><span class="text-sm font-black text-slate-800 block">${r.patient_name}</span><span class="text-xs text-slate-400 font-bold">${r.patient_pid}</span></div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-6"><span class="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black uppercase text-slate-500 tracking-wider">AI ANALYSIS</span></td>
+                        <td class="px-8 py-6"><span class="px-3 py-1 ${r.result === 'pneumonia' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'} rounded-lg text-[10px] font-black uppercase tracking-wider">${r.result}</span></td>
+                        <td class="px-8 py-6"><span class="text-sm font-black text-slate-700">${(r.confidence * 100).toFixed(1)}%</span></td>
+                        <td class="px-8 py-6 text-right"><button onclick="openModal(${r.patient_db_id})" class="text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 hover:bg-blue-600 hover:text-white transition-all">Review Ledger</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function escLedger(s) {
+            if (s == null || s === '') return '';
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        function ledgerDisplayBlock(h) {
+            const isChat = h.diagnosis_type === 'ai_chat' || (h.chat_user_query && String(h.chat_user_query).trim());
+            if (!isChat) {
+                let diagHtml = '';
+                if (h.diagnosis_type === 'pneumonia' || h.diagnosis_type === 'stroke' || h.diagnosis_type === 'skin') {
+                    const conf = ((h.confidence != null ? Number(h.confidence) : 0) * 100).toFixed(1);
+                    diagHtml = `<div class="mb-3 space-y-2">
+                        <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Diagnostic Output</p>
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 bg-slate-100 rounded-lg text-xs font-black uppercase text-slate-700">${escLedger(h.result)}</span>
+                            <span class="text-xs font-bold text-slate-500">Confidence: ${conf}%</span>
+                        </div>
+                    </div>`;
+                }
+                let imgHtml = '';
+                if (h.chat_image_path) {
+                    imgHtml = `<div class="mb-3">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Input Image / Scan</p>
+                        <img src="/api/uploads/chat-lab/${escLedger(h.chat_image_path)}" class="max-h-48 rounded-xl border border-slate-200" alt="Scanned image">
+                    </div>`;
+                }
+                return `<div class="text-left">${imgHtml}${diagHtml}<p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Doctor Notes</p><p class="text-sm font-medium text-slate-600 italic">"${escLedger(h.doctor_notes || 'No notes.')}"</p></div>`;
+            }
+            let imgHtml = '';
+            if (h.chat_image_path) {
+                imgHtml = `<div class="mt-3">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Image / Scan</p>
+                    <img src="/api/uploads/chat-lab/${escLedger(h.chat_image_path)}" class="max-h-48 rounded-xl border border-slate-200" alt="">
+                </div>`;
+            }
+            const ref = h.referenced_history_ids ? `<p class="text-[10px] text-slate-400 mt-2">Context record IDs: ${escLedger(h.referenced_history_ids)}</p>` : '';
+            return `<div class="space-y-3 text-left">
+                <div><p class="text-[10px] font-black text-violet-600 uppercase tracking-widest">Doctor / case input</p>
+                <p class="text-sm text-slate-800 whitespace-pre-wrap font-medium">${escLedger(h.chat_user_query)}</p></div>
+                <div><p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">AI response</p>
+                <p class="text-sm text-slate-600 whitespace-pre-wrap max-h-56 overflow-y-auto">${escLedger(h.chat_ai_response || '')}</p></div>
+                ${ref}${imgHtml}
+                <p class="text-xs text-slate-500 border-t border-slate-100 pt-2"><span class="font-bold">Log notes:</span> ${escLedger(h.doctor_notes || '—')}</p>
+            </div>`;
+        }
+
+        async function openModal(id) {
+            document.getElementById('patient-modal').classList.add('open');
+            currentEditingPatientId = id;
+            try {
+                const [pRes, hRes] = await Promise.all([fetch(`/api/patients/${id}`), fetch(`/api/patients/${id}/history`)]);
+                const p = (await pRes.json()).patient; const history = (await hRes.json()).history || [];
+                document.getElementById('modal-avatar').textContent = p.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById('modal-name').textContent = p.full_name;
+                document.getElementById('modal-meta').textContent = `${p.patient_id} • Age ${p.age} • ${p.gender}`;
+                document.getElementById('modal-contact').textContent = p.contact || '—';
+                document.getElementById('modal-registered').textContent = new Date(p.created_at + 'Z').toLocaleDateString();
+                document.getElementById('modal-med-history').textContent = p.medical_history || 'No recorded history.';
+                document.getElementById('modal-total').textContent = history.length;
+                document.getElementById('modal-pneumonia').textContent = history.filter(h => h.result === 'pneumonia').length;
+                document.getElementById('modal-normal').textContent = history.filter(h => h.result === 'normal').length;
+
+                const tBody = document.getElementById('modal-timeline');
+                tBody.innerHTML = history.length === 0 ? `<p class="text-sm text-slate-400 text-center py-12 font-medium">No diagnostic records found.</p>` : history.map(h => {
+                    const isChat = h.diagnosis_type === 'ai_chat' || (h.chat_user_query && String(h.chat_user_query).trim());
+                    const isPn = !isChat && h.result === 'pneumonia';
+                    const dotClass = isChat ? 'bg-violet-600 shadow-violet-100' : (isPn ? 'bg-red-500 shadow-red-100' : 'bg-emerald-500 shadow-emerald-100');
+                    const icon = isChat ? 'smart_toy' : (isPn ? 'warning' : 'check_circle');
+                    const badgeClass = isChat ? 'text-violet-600' : (isPn ? 'text-red-500' : 'text-emerald-500');
+                    const badgeText = isChat ? 'AI CHAT' : `${h.result} SCAN`;
+                    const hJson = JSON.stringify(h).replace(/"/g,'&quot;');
+                    const pJson = JSON.stringify(p).replace(/"/g,'&quot;');
+                    return `
+                        <div class="timeline-item">
+                            <div class="timeline-dot ${dotClass} text-white">
+                                <span class="material-symbols-outlined text-[16px]">${icon}</span>
+                            </div>
+                            <div class="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <span class="text-[10px] font-black uppercase tracking-widest ${badgeClass}">${badgeText}</span>
+                                        <p class="text-xs text-slate-400 mt-0.5 font-bold">${new Date(h.created_at + 'Z').toLocaleString()}</p>
+                                        ${isChat ? `<p class="text-[10px] font-bold text-slate-500 mt-1">Summary: ${escLedger(h.result)}</p>` : ''}
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button onclick="openHistoryReport(${hJson}, ${pJson})" title="View Report" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wide transition-all shadow-sm">
+                                            <span class="material-symbols-outlined text-[14px]">description</span>Report
+                                        </button>
+                                        <button onclick="toggleEditMode(${h.id})" class="w-9 h-9 rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-all flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-[20px]">edit_square</span>
+                                        </button>
+                                        <button onclick="deleteRecord(${h.id}, ${p.id})" class="w-9 h-9 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-600 transition-all flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-[20px]">delete_forever</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="display-notes-${h.id}">
+                                    ${ledgerDisplayBlock(h)}
+                                </div>
+                                <div id="edit-area-${h.id}" class="hidden space-y-3">
+                                    <textarea id="note-input-${h.id}" class="edit-notes-area mb-4">${h.doctor_notes || ''}</textarea>
+                                    <div class="flex gap-2">
+                                        <button onclick="saveNotes(${h.id}, ${p.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100">Update</button>
+                                        <button onclick="toggleEditMode(${h.id})" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('');
+            } catch (err) { console.error('Ledger error:', err); }
+        }
+
+        function buildSimpleScanReport(h, p, me) {
+            const visitDate = (h.created_at || '').split('T')[0] || h.created_at || '—';
+            const scanLabels = { pneumonia: 'Chest X-Ray', stroke: 'Stroke Risk Assessment', skin: 'Skin Lesion Analysis' };
+            const testName = scanLabels[h.diagnosis_type] || 'AI Diagnostic Scan';
+            const conf = h.confidence != null ? `${(Number(h.confidence) * 100).toFixed(1)}%` : '—';
+            const result = h.result || '—';
+            let adviceItems = ['Follow up with your doctor for clinical confirmation.'];
+            if (h.diagnosis_type === 'pneumonia') {
+                adviceItems = result === 'pneumonia'
+                    ? ['Seek physician evaluation.', 'Monitor breathing and fever.', 'Rest and stay hydrated.']
+                    : ['No pneumonia pattern detected.', 'Routine follow-up as needed.'];
+            } else if (h.diagnosis_type === 'stroke') {
+                const low = String(result).toLowerCase().includes('low') || String(result).toLowerCase().includes('normal');
+                adviceItems = low ? ['Maintain healthy lifestyle.', 'Annual check-ups recommended.'] : ['Urgent physician review advised.', 'Control cardiovascular risk factors.'];
+            }
+
+            const dName   = (me && me.user && me.user.full_name)      ? me.user.full_name      : 'Physician';
+            const dSpec   = (me && me.user && me.user.specialization)  ? me.user.specialization : 'General Practitioner';
+            const dClinic = (me && me.user && me.user.clinic_name)     ? me.user.clinic_name    : 'SehatAi Medical Center';
+            const dPhone  = (me && me.user && me.user.phone)           ? me.user.phone          : '';
+            const dEmail  = (me && me.user && me.user.email)           ? me.user.email          : '';
+            const dReg    = (me && me.user && me.user.registration_no) ? me.user.registration_no: '';
+
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Scan Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: #fff; color: #1e293b; padding: 30px; line-height: 1.5; font-size: 13px; }
+        
+        /* Hospital Header */
+        .rpt-header {
+            display: flex;
+            background: #1e3a8a;
+            color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .rpt-header-left {
+            padding: 20px 24px;
+            flex: 1;
+        }
+        .rpt-hosp-name {
+            font-size: 1.45rem;
+            font-weight: 900;
+            line-height: 1.1;
+        }
+        .rpt-hosp-tagline {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #93c5fd;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+        .rpt-hosp-address {
+            font-size: 10px;
+            color: #bfdbfe;
+            margin-top: 6px;
+        }
+        .rpt-header-right {
+            background: rgba(0, 0, 0, 0.18);
+            padding: 16px 20px;
+            min-width: 180px;
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+        }
+        .rpt-label {
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #93c5fd;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        .rpt-value {
+            font-size: 11px;
+            color: #e0f2fe;
+            font-weight: 600;
+        }
+        
+        /* Title Bar */
+        .rpt-title-bar {
+            background: #f0f9ff;
+            border-top: 3px solid #1d4ed8;
+            border-bottom: 1px solid #bae6fd;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .rpt-title-bar h1 {
+            font-size: 1rem;
+            font-weight: 900;
+            color: #1e3a8a;
+            text-transform: uppercase;
+        }
+        .rpt-title-meta {
+            font-size: 10.5px;
+            color: #0369a1;
+            font-weight: 600;
+        }
+        
+        /* Patient Details Bar */
+        .rpt-patient-bar {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            font-size: 12px;
+            color: #1e293b;
+        }
+        
+        /* Section styling */
+        .section-title {
+            font-size: 12px;
+            font-weight: 800;
+            color: #1e3a8a;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .section-content {
+            margin-bottom: 20px;
+            padding-left: 2px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        
+        /* Footer signatures */
+        .irpt-dr-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .irpt-dr-name { font-size:12.5px; font-weight:900; color:#1e293b; }
+        .irpt-dr-spec { font-size:10px; font-weight:700; color:#475569; }
+        .irpt-dr-clinic { font-size:10px; font-weight:600; color:#64748b; }
+        .irpt-dr-contact { font-size:9.5px; color:#64748b; margin-top:2px; }
+        .irpt-dr-reg { font-size:9.5px; font-weight:700; color:#475569; margin-top:3px; }
+        
+        .irpt-sign-col { display:flex; flex-direction:column; align-items:center; width:150px; text-align:center; }
+        .irpt-stamp {
+            width: 70px; height: 70px;
+            border: 2px double #3b82f6;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 900; color: #2563eb;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            transform: rotate(-12deg);
+            margin-bottom: 15px;
+            opacity: 0.85;
+            background: #fff;
+        }
+        .irpt-sign-line { width:100%; border-top:1px solid #cbd5e1; margin-bottom:4px; }
+        
+        .disclaimer-bar {
+            margin-top: 30px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-size: 10.5px;
+            color: #64748b;
+            line-height: 1.5;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="rpt-header">
+        <div class="rpt-header-left">
+            <div class="rpt-hosp-name">⚕ ${escLedger(dClinic)}</div>
+            <div class="rpt-hosp-tagline">AI-Assisted Medical Facility</div>
+            <div class="rpt-hosp-address">
+                ${dPhone ? '📞 ' + escLedger(dPhone) + '&nbsp;&nbsp;' : ''}
+                ${dEmail ? '✉ ' + escLedger(dEmail) : ''}
+            </div>
+        </div>
+        <div class="rpt-header-right">
+            <div class="rpt-label">Report ID</div>
+            <div class="rpt-value">#${escLedger(String(h.id || '—'))}</div>
+            <div class="rpt-label" style="margin-top:8px;">Date of Visit</div>
+            <div class="rpt-value">${escLedger(visitDate)}</div>
+            ${dReg ? `<div class="rpt-label" style="margin-top:8px;">Reg. No.</div><div class="rpt-value">${escLedger(dReg)}</div>` : ''}
+        </div>
+    </div>
+    
+    <div class="rpt-title-bar">
+        <h1>After Visit Summary</h1>
+        <span class="rpt-title-meta">Dr. ${escLedger(dName)} &nbsp;·&nbsp; ${escLedger(dSpec)}</span>
+    </div>
+    
+    <div class="rpt-patient-bar">
+        <strong>Patient:</strong> ${escLedger(p.full_name)} &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Age:</strong> ${escLedger(p.age)} &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Gender:</strong> ${escLedger(p.gender || '—')} &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>ID:</strong> ${escLedger(p.patient_id)} &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Visit Date:</strong> ${escLedger(visitDate)}
+    </div>
+    
+    <h3 class="section-title">Basic Findings</h3>
+    <div class="section-content">
+        <ul style="padding-left: 20px;">
+            <li><strong>Scan Type:</strong> ${escLedger(testName)}</li>
+            <li><strong>Result:</strong> <span style="font-size: 14px; font-weight: 800; color: #1e293b;">${escLedger(result)}</span></li>
+            <li><strong>Confidence Score:</strong> ${escLedger(conf)}</li>
+        </ul>
+    </div>
+    
+    <h3 class="section-title">Advice</h3>
+    <div class="section-content">
+        <ul style="padding-left: 20px;">
+            ${adviceItems.map(a => `<li>${escLedger(a)}</li>`).join('')}
+        </ul>
+    </div>
+    
+    <div class="irpt-dr-row">
+        <div>
+            <div class="irpt-dr-name">Dr. ${escLedger(dName)}</div>
+            <div class="irpt-dr-spec">${escLedger(dSpec)}</div>
+            <div class="irpt-dr-clinic">${escLedger(dClinic)}</div>
+            <div class="irpt-dr-contact">
+                ${dPhone ? '📞 ' + escLedger(dPhone) + '<br>' : ''}
+                ${dEmail ? '✉ ' + escLedger(dEmail) : ''}
+            </div>
+            ${dReg ? `<div class="irpt-dr-reg">Reg. No: ${escLedger(dReg)}</div>` : ''}
+        </div>
+        <div class="irpt-sign-col">
+            <div class="irpt-stamp">Official<br>Stamp</div>
+            <div class="irpt-sign-line">Authorized Signatory</div>
+            <div style="font-size:10.5px;font-weight:700;color:#374151;">Dr. ${escLedger(dName)}</div>
+        </div>
+    </div>
+    
+    <div class="disclaimer-bar">
+        This document is a confidential medical record generated with AI assistance. For emergencies call <strong>1122</strong> (Rescue) or visit the nearest emergency department.<br>
+        <span style="font-size:9.5px; font-weight:600; color:#94a3b8; display:block; margin-top:4px;">⚡ AI-assisted report by SehatAi. Verified &amp; authorized by Dr. ${escLedger(dName)}.</span>
+    </div>
+</body>
+</html>`;
+        }
+
+        async function openHistoryReport(h, p) {
+            if (h.diagnosis_type === 'ai_chat' && h.medical_report_id) {
+                window.open('medical_report_print.html?id=' + h.medical_report_id, '_blank');
+                return;
+            }
+            const me = await getMe();
+            const isScan = ['pneumonia', 'stroke', 'skin'].includes(h.diagnosis_type);
+            const body = isScan 
+                ? buildSimpleScanReport(h, p, me) 
+                : `<!DOCTYPE html><html><head><title>Report</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif;}body{background:#fff;color:#1e293b;padding:30px;line-height:1.5;font-size:13px;}pre{white-space:pre-wrap;}</style></head><body><h2 style="font-size:18px;font-weight:800;border-bottom:2px solid #2563eb;padding-bottom:12px;margin-bottom:20px;">AI Consultation Report</h2><pre>${escLedger(h.chat_ai_response || h.result || '')}</pre></body></html>`;
+            
+            openReportDrawer(body);
+        }
+
+        function openReportDrawer(body) {
+            const drawer = document.getElementById('report-drawer');
+            const iframe = document.getElementById('report-iframe');
+            drawer.classList.add('open');
+            drawer.setAttribute('aria-hidden', 'false');
+            
+            setTimeout(() => {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                doc.open();
+                doc.write(body);
+                doc.close();
+            }, 50);
+        }
+
+        function closeReportDrawer() {
+            const drawer = document.getElementById('report-drawer');
+            drawer.classList.remove('open');
+            drawer.setAttribute('aria-hidden', 'true');
+        }
+
+        function printReportDrawerContent() {
+            const iframe = document.getElementById('report-iframe');
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        };
+
+        async function saveNotes(hId, pId) {
+            const notes = document.getElementById(`note-input-${hId}`).value;
+            try {
+                const res = await fetch(`/api/history/${hId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doctor_notes: notes })
+                });
+                if (res.ok) openModal(pId);
+            } catch (err) { console.error(err); }
+        }
+
+        function startNewDiagnosis() {
+            const type = document.getElementById('diagnosis-type-select').value;
+            if (type === 'pneumonia') {
+                window.location.href = `pneumonia_prediction.html?patient_id=${currentEditingPatientId}`;
+            } else if (type === 'stroke') {
+                window.location.href = `stroke_prediction.html?patient_id=${currentEditingPatientId}`;
+            } else if (type === 'skin') {
+                window.location.href = `skin_prediction.html?patient_id=${currentEditingPatientId}`;
+            } else {
+                alert(`Expansion Pipeline: The "${type.toUpperCase()}" diagnostic module is currently being calibrated in our lab. \n\nExpected Release: Next System Update.`);
+            }
+        }
+
+        async function deleteRecord(hId, pId) {
+            if (!confirm('Delete this record? Linked AI reports will be removed from all sections.')) return;
+            try {
+                const res = await fetch(`/api/history/${hId}`, { method: 'DELETE' });
+                if (res.ok) openModal(pId);
+            } catch (err) { console.error('Deletion failed:', err); }
+        }
+
+        function closeModal() { document.getElementById('patient-modal').classList.remove('open'); }
+
+        let chatIframeLoaded = false;
+        function openChatDrawer() {
+            const drawer = document.getElementById('chat-drawer');
+            const iframe = document.getElementById('chat-iframe');
+            if (!chatIframeLoaded) {
+                iframe.src = 'chat_bot.html?t=' + Date.now();
+                chatIframeLoaded = true;
+            }
+            drawer.classList.add('open');
+            drawer.setAttribute('aria-hidden', 'false');
+        }
+        function closeChatDrawer() {
+            const drawer = document.getElementById('chat-drawer');
+            drawer.classList.remove('open');
+            drawer.setAttribute('aria-hidden', 'true');
+        }
+        function toggleChatDrawer() {
+            const drawer = document.getElementById('chat-drawer');
+            if (drawer.classList.contains('open')) closeChatDrawer();
+            else openChatDrawer();
+        }
+        function askAIChatbot() {
+            closeModal();
+            const iframe = document.getElementById('chat-iframe');
+            iframe.src = `chat_bot.html?auto_patient_id=${currentEditingPatientId}&t=` + Date.now();
+            chatIframeLoaded = true;
+            openChatDrawer();
+        }
+        function toggleEditMode(hId) {
+            document.getElementById(`display-notes-${hId}`).classList.toggle('hidden');
+            document.getElementById(`edit-area-${hId}`).classList.toggle('hidden');
+        }
+        function doLogout() { fetch('/api/logout', { method: 'POST' }).then(() => window.location.href = '/'); }
+        loadDashboardStats(); loadRecentDiagnostics();
+    </script>
+</body>
+
+</html>

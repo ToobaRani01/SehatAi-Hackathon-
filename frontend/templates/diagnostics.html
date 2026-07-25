@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Medical Diagnostic Modules - SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#2563eb', secondary: '#475569',
+                        success: '#22c55e', warning: '#f59e0b',
+                        danger: '#ef4444', background: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .active-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .nav-link-active {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+        }
+
+        .diag-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .diag-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1);
+        }
+
+        .coming-soon-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(248, 250, 252, 0.65);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 1rem;
+            z-index: 10;
+        }
+
+        .diag-card.coming-soon:hover .coming-soon-overlay {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined text-xl active-icon">medical_services</span>
+                    </div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+                </div>
+
+                <!-- Nav Links -->
+                <div class="flex items-center gap-1">
+                    <a href="/dashboard.html"
+                        class="px-4 py-5 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors border-b-2 border-transparent hover:border-blue-200">Dashboard</a>
+                    <a href="/patients.html"
+                        class="px-4 py-5 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors border-b-2 border-transparent hover:border-blue-200">Patients</a>
+                    <a href="/diagnostics.html" class="px-4 py-5 text-sm font-semibold nav-link-active">Diagnostics</a>
+                    <a href="/history.html"
+                        class="px-4 py-5 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors border-b-2 border-transparent hover:border-blue-200">History</a>
+                    <a href="/profile.html"
+                        class="px-4 py-5 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors border-b-2 border-transparent hover:border-blue-200">Profile</a>
+                </div>
+
+                <!-- Profile Section -->
+                <div class="flex items-center gap-3">
+                    <div class="relative group">
+                        <button
+                            class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div
+                                class="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+                                <span class="material-symbols-outlined text-blue-600 text-xl">person</span>
+                            </div>
+                            <span class="material-symbols-outlined text-slate-400 text-lg">expand_more</span>
+                        </button>
+                        <div
+                            class="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-2 hidden group-hover:block z-50">
+                            <a href="profile.html"
+                                class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                                <span class="material-symbols-outlined text-lg">settings</span> Settings
+                            </a>
+                            <hr class="my-1 border-slate-100">
+                            <a href="#" onclick="doLogout()"
+                                class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                                <span class="material-symbols-outlined text-lg">logout</span> Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-6 lg:px-8 py-10">
+        <header class="mb-10">
+            <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Diagnostic Selection Menu</h2>
+            <p class="text-slate-500 font-medium mt-1">Select a condition to begin an AI-powered analysis.</p>
+        </header>
+
+        <!-- Diagnostic Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+
+            <!-- Pneumonia Detection — ACTIVE -->
+            <a href="/pneumonia_prediction.html"
+                class="diag-card bg-white rounded-2xl border border-slate-200 shadow-sm p-7 flex flex-col group hover:border-blue-500/50 transition-all">
+                <div
+                    class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-5 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-3xl">pulmonology</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">Pneumonia
+                    Detection</h3>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed flex-1 mb-6">Requires Chest X-ray image.
+                    Upload a clear AP or PA view.</p>
+                <div
+                    class="w-full bg-blue-600 group-hover:bg-blue-700 text-white text-center font-bold py-3 rounded-xl shadow-md shadow-blue-200 active:scale-[0.97] transition-all text-sm">
+                    Start Analysis
+                </div>
+            </a>
+
+            <!-- Kidney Stone Analysis — Coming Soon -->
+            <div
+                class="diag-card coming-soon bg-white rounded-2xl border border-slate-200 shadow-sm p-7 flex flex-col relative">
+                <div class="coming-soon-overlay">
+                    <span
+                        class="bg-white px-6 py-3 rounded-2xl text-sm font-bold text-slate-600 shadow-lg border border-slate-200">🔒
+                        Coming Soon</span>
+                </div>
+                <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-5">
+                    <span class="material-symbols-outlined text-3xl">nephrology</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-2">Kidney Stone Analysis</h3>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed flex-1 mb-6">Requires CT scan or Ultrasound
+                    image. Supported formats: DICOM, JPEG.</p>
+                <button disabled
+                    class="w-full bg-blue-600 opacity-50 cursor-not-allowed text-white text-center font-bold py-3 rounded-xl shadow-md text-sm">
+                    Start Analysis
+                </button>
+            </div>
+
+            <!-- Skin Disease Identification — ACTIVE -->
+            <a href="/skin_prediction.html"
+                class="diag-card bg-white rounded-2xl border border-slate-200 shadow-sm p-7 flex flex-col group hover:border-blue-500/50 transition-all">
+                <div
+                    class="w-14 h-14 bg-violet-50 rounded-2xl flex items-center justify-center text-violet-600 mb-5 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-3xl">dermatology</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">Skin Disease</h3>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed flex-1 mb-6">Requires close-up photo of
+                    affected area with good lighting.</p>
+                <div
+                    class="w-full bg-blue-600 group-hover:bg-blue-700 text-white text-center font-bold py-3 rounded-xl shadow-md shadow-blue-200 active:scale-[0.97] transition-all text-sm">
+                    Start Analysis
+                </div>
+            </a>
+
+            <!-- Diabetes Risk Assessment — Coming Soon -->
+            <div
+                class="diag-card coming-soon bg-white rounded-2xl border border-slate-200 shadow-sm p-7 flex flex-col relative">
+                <div class="coming-soon-overlay">
+                    <span
+                        class="bg-white px-6 py-3 rounded-2xl text-sm font-bold text-slate-600 shadow-lg border border-slate-200">🔒
+                        Coming Soon</span>
+                </div>
+                <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-5">
+                    <span class="material-symbols-outlined text-3xl">bloodtype</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-2">Diabetes Risk Assessment</h3>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed flex-1 mb-6">Requires patient blood test
+                    data (HbA1c, fasting glucose) and demographic info.</p>
+                <button disabled
+                    class="w-full bg-blue-600 opacity-50 cursor-not-allowed text-white text-center font-bold py-3 rounded-xl shadow-md text-sm">
+                    Start Analysis
+                </button>
+            </div>
+
+            <!-- Stroke Prediction — ACTIVE -->
+            <a href="/stroke_prediction.html"
+                class="diag-card bg-white rounded-2xl border border-slate-200 shadow-sm p-7 flex flex-col group hover:border-blue-500/50 transition-all">
+                <div
+                    class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 mb-5 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-3xl">cardiology</span>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">Stroke
+                    Prediction & Analysis</h3>
+                <p class="text-slate-500 text-sm font-medium leading-relaxed flex-1 mb-6">Requires clinical history and
+                    biometric parameters (Age, Glucose, BMI, etc.) for risk assessment.</p>
+                <div
+                    class="w-full bg-blue-600 group-hover:bg-blue-700 text-white text-center font-bold py-3 rounded-xl shadow-md shadow-blue-200 active:scale-[0.97] transition-all text-sm">
+                    Start Analysis
+                </div>
+            </a>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 bg-white py-6">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 text-center">
+            <p class="text-sm text-slate-400 font-medium">© 2024 <span class="text-slate-600 font-bold">SehatAi</span>.
+                Comprehensive AI-powered medical platform. Privacy Policy | Terms of Service</p>
+        </div>
+    </footer>
+
+    <script>
+        function doLogout() {
+            fetch('/api/logout', { method: 'POST' })
+                .then(() => { window.location.href = '/'; })
+                .catch(() => { window.location.href = '/'; });
+        }
+    </script>
+</body>
+
+</html>

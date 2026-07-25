@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Diagnostic History & Reports - SehatAi</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#2563eb', secondary: '#475569',
+                        success: '#22c55e', warning: '#f59e0b',
+                        danger: '#ef4444', background: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar-item-active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-right: 4px solid #2563eb;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .active-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Patient Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 32px;
+            width: 100%;
+            max-width: 720px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+        }
+
+        /* ── Report Preview Modal ── */
+        .rpt-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 20, 40, 0.75);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 24px 12px 40px;
+            overflow-y: auto;
+        }
+        .rpt-modal-overlay.open { display: flex; }
+        .rpt-modal-sheet {
+            background: #fff;
+            border-radius: 6px;
+            width: 100%;
+            max-width: 740px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+            overflow: hidden;
+            animation: rptIn 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes rptIn {
+            from { opacity:0; transform:translateY(24px) scale(0.98); }
+            to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+        .rpt-modal-toolbar {
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+        }
+        .rpt-modal-toolbar span { color: #94a3b8; font-size: 12px; font-weight: 700; font-family: Inter,sans-serif; }
+        .rpt-modal-toolbar button {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #e2e8f0;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: Inter,sans-serif;
+            transition: background 0.15s;
+        }
+        .rpt-modal-toolbar button:hover { background: rgba(255,255,255,0.18); }
+        .rpt-modal-toolbar .rpt-close-btn {
+            background: rgba(239,68,68,0.15);
+            color: #fca5a5;
+        }
+        .rpt-modal-toolbar .rpt-close-btn:hover { background: rgba(239,68,68,0.3); }
+
+        /* ── Inline Clinical Report Styles ── */
+        .irpt * { box-sizing: border-box; margin: 0; padding: 0; font-family: Inter,system-ui,sans-serif; line-height: 1.5; }
+        .irpt { font-size: 13px; color: #111827; }
+        .irpt-hdr {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%);
+            display: flex; align-items: stretch;
+        }
+        .irpt-hdr-l { padding: 18px 22px 16px; flex: 1; }
+        .irpt-hosp-name { font-size: 1.45rem; font-weight: 900; color:#fff; letter-spacing:-0.02em; line-height:1.1; }
+        .irpt-hosp-tag  { font-size: 9px; font-weight:700; color:#93c5fd; letter-spacing:.15em; text-transform:uppercase; margin-top:3px; }
+        .irpt-hosp-addr { font-size: 10px; color:#bfdbfe; margin-top:6px; line-height:1.6; }
+        .irpt-hdr-r {
+            background: rgba(0,0,0,0.18); padding:14px 18px; min-width:168px;
+            text-align:right; display:flex; flex-direction:column; justify-content:center; gap:3px;
+        }
+        .irpt-hdr-r .hl { font-size:8px; font-weight:800; color:#93c5fd; letter-spacing:.15em; text-transform:uppercase; }
+        .irpt-hdr-r .hv { font-size:11px; color:#e0f2fe; font-weight:600; }
+        .irpt-title {
+            background:#f0f9ff; border-top:3px solid #1d4ed8; border-bottom:1px solid #bae6fd;
+            padding:9px 22px; display:flex; justify-content:space-between; align-items:center;
+        }
+        .irpt-title h2 { font-size:.95rem; font-weight:900; color:#1e3a8a; letter-spacing:.02em; text-transform:uppercase; }
+        .irpt-title-meta { font-size:10px; color:#0369a1; font-weight:600; }
+        .irpt-body { padding:16px 22px 22px; }
+
+        .irpt-card { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:10px; }
+        .irpt-card-hdr {
+            background:#eff6ff; padding:6px 12px;
+            font-size:8.5px; font-weight:800; letter-spacing:.16em;
+            text-transform:uppercase; color:#1d4ed8;
+            display:flex; align-items:center; gap:5px;
+            border-bottom:1px solid #bfdbfe;
+        }
+        .irpt-card-hdr-dot { width:5px; height:5px; border-radius:50%; background:#3b82f6; flex-shrink:0; }
+        .irpt-row { display:flex; min-height:0; }
+        .irpt-left {
+            width:130px; min-width:130px; background:#f8fafc;
+            border-right:1px solid #e5e7eb; padding:10px 8px;
+            display:flex; flex-direction:column; align-items:center; gap:7px;
+        }
+        .irpt-badge { width:100%; border-radius:7px; padding:6px 8px; text-align:center; }
+        .irpt-badge.blue  { background:#1d4ed8; }
+        .irpt-badge.dark  { background:#1e293b; }
+        .irpt-badge.green { background:#065f46; }
+        .irpt-badge .blbl { font-size:8px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,0.6); }
+        .irpt-badge .bval { font-size:11px; font-weight:900; color:#fff; margin-top:2px; word-break:break-word; line-height:1.2; }
+        .irpt-badge .bval.found, .irpt-badge .bval.positive, .irpt-badge .bval.detected { color:#fca5a5; }
+        .irpt-badge .bval.clear,  .irpt-badge .bval.normal,   .irpt-badge .bval.negative { color:#86efac; }
+        .irpt-scan {
+            width:112px; height:78px; border-radius:6px;
+            object-fit:cover; border:1px solid #cbd5e1; background:#e2e8f0;
+        }
+        .irpt-noscn {
+            width:112px; height:78px; border-radius:6px;
+            border:1px dashed #cbd5e1; display:flex; align-items:center;
+            justify-content:center; font-size:9px; color:#94a3b8;
+            font-weight:600; text-align:center; background:#f1f5f9;
+        }
+        .irpt-scn-lbl { font-size:8.5px; color:#94a3b8; font-weight:600; text-align:center; }
+        .irpt-right { flex:1; padding:10px 14px; font-size:12px; color:#1f2937; }
+        .irpt-field { display:flex; gap:5px; margin-bottom:4px; align-items:baseline; line-height:1.4; }
+        .irpt-fl { font-weight:700; color:#475569; min-width:84px; font-size:10.5px; flex-shrink:0; }
+        .irpt-fv { color:#111827; font-size:11.5px; font-weight:500; }
+        .irpt-fv.hi  { color:#1d4ed8; font-weight:700; }
+        .irpt-fv.ok  { color:#15803d; font-weight:700; }
+        .irpt-fv.err { color:#b91c1c; font-weight:700; }
+        .irpt-div { border:none; border-top:1px dashed #e5e7eb; margin:7px 0; }
+        .irpt-sublbl { font-size:8.5px; font-weight:800; color:#94a3b8; letter-spacing:.12em; text-transform:uppercase; margin-bottom:4px; }
+        .irpt-bullets { list-style:none; padding:0; margin:2px 0 0; }
+        .irpt-bullets li { display:flex; gap:5px; font-size:11.5px; color:#374151; margin-bottom:3px; line-height:1.4; }
+        .irpt-bullets li::before { content:'▸'; color:#1d4ed8; font-weight:900; flex-shrink:0; font-size:9.5px; margin-top:1px; }
+        .irpt-sev { display:inline-block; padding:2px 9px; border-radius:20px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; background:#fef3c7; border:1px solid #fbbf24; color:#92400e; }
+        .irpt-med-table { width:100%; border-collapse:collapse; font-size:11px; }
+        .irpt-med-table th { background:#eff6ff; color:#1d4ed8; padding:5px 10px; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.1em; text-align:left; border-bottom:1px solid #bfdbfe; }
+        .irpt-med-table td { border-bottom:1px solid #f1f5f9; padding:6px 10px; vertical-align:top; color:#1f2937; }
+        .irpt-med-table tr:nth-child(even) td { background:#f8fafc; }
+        .irpt-appt {
+            background:linear-gradient(135deg,#eff6ff,#f0fdf4); border:1px solid #bfdbfe;
+            border-radius:8px; padding:10px 14px; margin:10px 0;
+            display:flex; align-items:flex-start; gap:10px;
+        }
+        .irpt-appt-ico { font-size:20px; flex-shrink:0; line-height:1; }
+        .irpt-appt-body { font-size:12px; color:#1e40af; line-height:1.5; }
+        .irpt-appt-body strong { font-weight:800; color:#1e3a8a; }
+        .irpt-appt-sub { font-size:10px; color:#3b82f6; margin-top:2px; }
+        .irpt-dr-row {
+            margin-top:14px; border-top:2px solid #1d4ed8;
+            padding-top:12px; display:flex; justify-content:space-between;
+            align-items:flex-end; gap:14px;
+        }
+        .irpt-dr-name { font-size:14px; font-weight:900; color:#0f172a; letter-spacing:-.01em; }
+        .irpt-dr-spec { font-size:10.5px; font-weight:700; color:#1d4ed8; margin-top:1px; }
+        .irpt-dr-clinic { font-size:10.5px; color:#6b7280; margin-top:2px; }
+        .irpt-dr-contact { font-size:10px; color:#6b7280; margin-top:4px; line-height:1.7; }
+        .irpt-dr-reg { font-size:9px; font-weight:700; color:#9ca3af; margin-top:3px; letter-spacing:.06em; text-transform:uppercase; }
+        .irpt-sign-col { text-align:center; min-width:140px; }
+        .irpt-stamp {
+            width:64px; height:64px; border:2.5px solid #1d4ed8; border-radius:50%;
+            margin:0 auto 5px; display:flex; align-items:center; justify-content:center;
+            font-size:7.5px; font-weight:800; color:#1d4ed8;
+            text-transform:uppercase; letter-spacing:.1em; line-height:1.3; text-align:center;
+        }
+        .irpt-sign-line { border-top:1px solid #374151; margin-bottom:3px; padding-top:3px; font-size:9.5px; font-weight:600; color:#6b7280; }
+        .irpt-disc { margin-top:12px; font-size:8.5px; color:#9ca3af; border-top:1px dashed #e5e7eb; padding-top:9px; line-height:1.7; }
+        .irpt-ai-note { font-size:8.5px; color:#6b7280; margin-top:4px; font-style:italic; }
+
+        /* Timeline Card */
+        .timeline-item {
+            position: relative;
+            padding-left: 48px;
+            padding-bottom: 32px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 32px;
+            bottom: 0;
+            width: 2px;
+            background: #e2e8f0;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            top: 4px;
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .edit-notes-area {
+            width: 100%;
+            height: 80px;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .edit-notes-area:focus {
+            border-color: #2563eb;
+        }
+
+        /* Floating chat — bottom-right */
+        .chat-drawer {
+            position: fixed;
+            z-index: 115;
+            right: 1.5rem;
+            left: auto;
+            bottom: 6.25rem;
+            width: min(420px, calc(100vw - 3rem));
+            height: min(560px, calc(100vh - 8rem));
+            display: flex;
+            flex-direction: column;
+            border-radius: 1.5rem;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.2);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .chat-drawer.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .chat-fab {
+            position: fixed;
+            z-index: 120;
+            right: 1.5rem;
+            left: auto;
+            bottom: 1.5rem;
+            width: 4.25rem;
+            height: 4.25rem;
+            border-radius: 1.15rem;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.45);
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .chat-fab:hover {
+            background: #1d4ed8;
+            transform: scale(1.05);
+        }
+
+        .chat-fab:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+
+<body class="flex min-h-screen">
+
+    <!-- Report Preview Modal (Clinical PDF-style) -->
+    <div id="rpt-preview-modal" class="rpt-modal-overlay" onclick="if(event.target===this)closeReportPreview()">
+        <div class="rpt-modal-sheet">
+            <div class="rpt-modal-toolbar">
+                <span id="rpt-preview-title">Medical Report Preview</span>
+                <div style="display:flex;gap:8px;">
+                    <button id="rpt-print-btn" onclick="printReportPreview()">🖨 Print</button>
+                    <button class="rpt-close-btn" onclick="closeReportPreview()">✕ Close</button>
+                </div>
+            </div>
+            <div id="rpt-preview-body" style="overflow-y:auto; max-height:calc(100vh - 100px); padding:0;"></div>
+        </div>
+    </div>
+
+    <!-- Patient Detail Modal (Synced with Dashboard) -->
+    <div id="patient-modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+        <div class="modal-box">
+            <!-- Modal Header -->
+            <div class="p-8 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-5">
+                    <div id="modal-avatar"
+                        class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">
+                        --</div>
+                    <div>
+                        <h3 id="modal-name" class="text-2xl font-bold text-slate-800">Patient Name</h3>
+                        <p id="modal-meta" class="text-sm text-slate-400 font-medium">P-00000 • Age 0 • Gender</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()"
+                    class="w-10 h-10 rounded-2xl bg-transparent hover:bg-red-50 text-slate-400 hover:text-red-600 flex items-center justify-center transition-all group">
+                    <span
+                        class="material-symbols-outlined text-lg group-hover:rotate-90 transition-transform">close</span>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-8 space-y-8">
+                <!-- Patient Info -->
+                <div class="bg-white rounded-3xl p-6 grid grid-cols-2 gap-6 border border-slate-100 shadow-sm">
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">contact_phone</span> Contact
+                        </p>
+                        <p id="modal-contact" class="text-sm font-semibold text-slate-700">—</p>
+                    </div>
+                    <div>
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">event</span> Registered
+                        </p>
+                        <p id="modal-registered" class="text-sm font-semibold text-slate-700">—</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">history_edu</span> Medical History
+                        </p>
+                        <p id="modal-med-history" class="text-sm font-medium text-slate-600 leading-relaxed">—</p>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Pipeline -->
+                <div class="space-y-4">
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest">Clinical Analysis Pipeline
+                    </h4>
+                    <select id="diagnosis-type-select"
+                        class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-black text-slate-700 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer">
+                        <option value="pneumonia">Chest X-Ray: Pneumonia Detection</option>
+                        <option value="stroke">Stroke Risk: Biometric Assessment</option>
+                    </select>
+                </div>
+
+                <!-- Timeline -->
+                <div class="space-y-6">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Patient History Timeline</h4>
+                    <div id="modal-timeline" class="space-y-1">
+                        <p class="text-sm text-slate-400 text-center py-12">No records found.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-8 border-t border-slate-100 bg-slate-50/50 grid grid-cols-2 gap-4 flex-shrink-0">
+                <button onclick="askAIChatbot()"
+                    class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-100 px-6 py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-3 transition-all active:scale-95 group">
+                    <span
+                        class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">smart_toy</span>
+                    Consult AI Chatbot
+                </button>
+                <button onclick="startNewDiagnosis()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl text-sm font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-blue-200">
+                    <span class="material-symbols-outlined text-xl">biotech</span> Start New Analysis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-full z-20">
+        <div class="p-6 flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-xl active-icon">medical_services</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-800">SehatAi</h1>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+            <a href="dashboard.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">grid_view</span> Dashboard
+            </a>
+            <a href="patients.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg">
+                <span class="material-symbols-outlined">group</span> Patients
+            </a>
+            <a href="diagnostics.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">stethoscope</span> Diagnostics
+            </a>
+            <a href="history.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg sidebar-item-active">
+                <span class="material-symbols-outlined active-icon">history</span> History
+            </a>
+            <a href="medical_reports.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">description</span> AI Reports
+            </a>
+            <a href="profile.html"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">person</span> Profile
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-100">
+            <a href="#" onclick="doLogout()"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 hover:text-red-600 transition-colors">
+                <span class="material-symbols-outlined">logout</span> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 ml-64 p-8">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h2 class="text-3xl font-black text-slate-800 tracking-tight">Full Diagnostic Ledger</h2>
+                <p class="text-slate-500 font-medium tracking-tight">Search for patient IDs or name to see chronological
+                    history.</p>
+            </div>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400">
+                    <span class="material-symbols-outlined text-xl">search</span>
+                </span>
+                <input id="search-input" type="text"
+                    class="pl-12 pr-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-sm w-80 font-semibold shadow-sm"
+                    placeholder="ID or Patient Name...">
+            </div>
+        </header>
+
+        <!-- History Table (Patient Concentric) -->
+        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50 border-b border-slate-100">
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Medical
+                            Entity</th>
+                        <th
+                            class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
+                            Tests</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Status/Trend</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Last
+                            Update</th>
+                        <th
+                            class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                            Ledger</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body" class="divide-y divide-slate-50">
+                    <tr>
+                        <td colspan="5" class="px-8 py-20 text-center text-slate-400 font-bold">Querying reports...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Medical assistant drawer + floating chat control -->
+    <div id="chat-drawer" class="chat-drawer" aria-hidden="true">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80 flex-shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-blue-600 text-xl">chat</span>
+                <span class="text-sm font-black text-slate-800 truncate">Assistant</span>
+            </div>
+            <button type="button" onclick="closeChatDrawer()"
+                class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-700 transition-colors"
+                aria-label="Close chat">
+                <span class="material-symbols-outlined">expand_more</span>
+            </button>
+        </div>
+        <iframe id="chat-iframe" class="flex-1 w-full min-h-0 border-0 bg-slate-50" title="SehatAi chat"
+            src="about:blank"></iframe>
+    </div>
+    <button type="button" id="chat-fab" class="chat-fab" onclick="toggleChatDrawer()" aria-label="Open medical chat">
+        <span class="material-symbols-outlined text-4xl leading-none"
+            style="font-variation-settings: 'FILL' 1;">chat</span>
+    </button>
+
+    <script>
+        let currentEditingPatientId = null;
+        let chatIframeLoaded = false;
+
+        async function loadHistory(search = '') {
+            try {
+                const url = search ? `/api/history?search=${encodeURIComponent(search)}` : '/api/history';
+                const res = await fetch(url);
+                const data = await res.json();
+                const records = data.history || [];
+                const patientMap = new Map();
+                records.forEach(r => { if (!patientMap.has(r.patient_db_id)) { patientMap.set(r.patient_db_id, { ...r, scans: records.filter(x => x.patient_db_id === r.patient_db_id) }); } });
+                const grouped = Array.from(patientMap.values());
+                const tbody = document.getElementById('history-table-body');
+                if (grouped.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="px-8 py-20 text-center font-bold text-slate-400">Zero entries found in database.</td></tr>`; return; }
+                tbody.innerHTML = grouped.map(r => {
+                    let badgeClass = "bg-emerald-50 text-emerald-600 border border-emerald-100";
+                    if (r.result.includes('pneumonia') || r.result.includes('high risk')) {
+                        badgeClass = "bg-red-50 text-red-600 border border-red-100";
+                    } else if (r.result.includes('moderate')) {
+                        badgeClass = "bg-amber-50 text-amber-600 border border-amber-100";
+                    }
+                    return `
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="px-8 py-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-xs">${r.patient_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}</div>
+                                <div class="text-sm font-black text-slate-800">${r.patient_name} <p class="text-[10px] text-slate-400 mt-1">${r.patient_pid}</p></div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-6 text-center"><span class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl font-black text-[10px]">${r.scans.length} ANALYSES</span></td>
+                        <td class="px-8 py-6"><span class="px-4 py-2 rounded-xl font-black text-[10px] uppercase ${badgeClass}">${r.result}</span></td>
+                        <td class="px-8 py-6 text-sm text-slate-500 font-bold">${new Date(r.created_at + 'Z').toLocaleDateString()}</td>
+                        <td class="px-8 py-6 text-right"><button onclick="openPatientModal(${r.patient_db_id})" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-5 py-2.5 rounded-2xl text-xs font-black transition-all">View Detailed Ledger</button></td>
+                    </tr>`}).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        function escLedger(s) {
+            if (s == null || s === '') return '';
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+        function ledgerDisplayBlock(h) {
+            const isChat = h.diagnosis_type === 'ai_chat' || (h.chat_user_query && String(h.chat_user_query).trim());
+            // Compact summary only — full detail opens in PDF modal
+            if (isChat) {
+                const snippet = (h.chat_user_query || '').replace(/\*\*/g,'').trim().substring(0, 90);
+                return `<div class="flex items-center gap-3 py-1">
+                    <span class="material-symbols-outlined text-violet-400 text-[18px]">smart_toy</span>
+                    <span class="text-xs text-slate-500 font-medium italic truncate">${escLedger(snippet)}${snippet.length >= 90 ? '…' : ''}</span>
+                </div>`;
+            }
+            const conf = h.confidence != null ? ` · ${(Number(h.confidence)*100).toFixed(1)}% conf.` : '';
+            const isPos = h.result.includes('pneumonia') || h.result.includes('high risk');
+            const resultCls = isPos ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700';
+            return `<div class="flex items-center gap-3 py-1">
+                <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${resultCls}">${escLedger(h.result)}</span>
+                <span class="text-[10px] text-slate-400 font-bold">${escLedger(conf)}</span>
+                ${h.doctor_notes ? `<span class="text-[10px] text-slate-400 italic truncate">· ${escLedger(h.doctor_notes)}</span>` : ''}
+            </div>`;
+        }
+
+        async function openPatientModal(id) {
+            currentEditingPatientId = id;
+            document.getElementById('patient-modal').classList.add('open');
+            try {
+                const [pRes, hRes] = await Promise.all([fetch(`/api/patients/${id}`), fetch(`/api/patients/${id}/history`)]);
+                const p = (await pRes.json()).patient; const history = (await hRes.json()).history || [];
+                document.getElementById('modal-avatar').textContent = p.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                document.getElementById('modal-name').textContent = p.full_name;
+                document.getElementById('modal-meta').textContent = `${p.patient_id} • Age ${p.age} • ${p.gender}`;
+                document.getElementById('modal-contact').textContent = p.contact || '—';
+                document.getElementById('modal-registered').textContent = p.created_at ? new Date(p.created_at + 'Z').toLocaleDateString() : '—';
+                document.getElementById('modal-med-history').textContent = p.medical_history || 'No recorded history.';
+
+                const tBody = document.getElementById('modal-timeline');
+                tBody.innerHTML = history.length === 0 ? '<p class="text-sm text-slate-400 text-center py-12">Zero records found.</p>' : history.map(h => {
+                    const isChat = h.diagnosis_type === 'ai_chat' || (h.chat_user_query && String(h.chat_user_query).trim());
+                    const isHighRisk = !isChat && (h.result.includes('pneumonia') || h.result.includes('high risk'));
+                    const isModRisk = !isChat && h.result.includes('moderate');
+                    const dotClass = isChat ? 'bg-violet-600 shadow-violet-100' : (isHighRisk ? 'bg-red-500 shadow-red-100' : (isModRisk ? 'bg-amber-500 shadow-amber-100' : 'bg-emerald-500 shadow-emerald-100'));
+                    const icon = isChat ? 'smart_toy' : (isHighRisk ? 'warning' : (isModRisk ? 'error_outline' : 'check_circle'));
+                    const textClass = isChat ? 'text-violet-600' : (isHighRisk ? 'text-red-500' : (isModRisk ? 'text-amber-500' : 'text-emerald-500'));
+                    const typeLabel = isChat ? 'AI Consultation' : (h.diagnosis_type === 'pneumonia' ? 'Chest X-Ray' : h.diagnosis_type === 'stroke' ? 'Stroke Risk' : 'Scan');
+                    const hJson = JSON.stringify(h).replace(/"/g,'&quot;');
+                    const pJson = JSON.stringify(p).replace(/"/g,'&quot;');
+
+                    return `
+                        <div class="timeline-item">
+                            <div class="timeline-dot ${dotClass} text-white">
+                                <span class="material-symbols-outlined text-[16px]">${icon}</span>
+                            </div>
+                            <!-- Horizontal compact card -->
+                            <div class="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+                                <!-- HEADER ROW -->
+                                <div class="flex items-center gap-3 px-5 py-3.5 border-b border-slate-50">
+                                    <!-- Type + date -->
+                                    <div class="flex-1 min-w-0">
+                                        <span class="text-[10px] font-black uppercase tracking-widest ${textClass}">${typeLabel}</span>
+                                        <span class="text-[10px] text-slate-400 font-semibold ml-2">${new Date(h.created_at + 'Z').toLocaleString()}</span>
+                                    </div>
+                                    <!-- Result badge -->
+                                    <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase ${isHighRisk ? 'bg-red-50 text-red-600' : isChat ? 'bg-violet-50 text-violet-600' : 'bg-emerald-50 text-emerald-700'}">${escLedger(isChat ? 'Consultation' : h.result)}</span>
+                                    <!-- Action buttons -->
+                                    <div class="flex gap-1 flex-shrink-0">
+                                        <button onclick="previewHistoryReport(${hJson}, ${pJson})" title="View Full Report" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wide transition-all shadow-sm">
+                                            <span class="material-symbols-outlined text-[14px]">description</span>Report
+                                        </button>
+                                        <button onclick="toggleEditMode(${h.id})" class="w-8 h-8 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-all flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-[18px]">edit_square</span>
+                                        </button>
+                                        <button onclick="deleteRecord(${h.id}, ${p.id})" class="w-8 h-8 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-600 transition-all flex items-center justify-center">
+                                            <span class="material-symbols-outlined text-[18px]">delete_forever</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- SUMMARY ROW -->
+                                <div id="display-notes-${h.id}" class="px-5 py-3">
+                                    ${ledgerDisplayBlock(h)}
+                                </div>
+                                <!-- EDIT AREA -->
+                                <div id="edit-area-${h.id}" class="hidden px-5 pb-4 space-y-3">
+                                    <textarea id="note-input-${h.id}" class="edit-notes-area">${h.doctor_notes || ''}</textarea>
+                                    ${!isChat ? `<label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Update Status</label>
+                                    <select id="result-select-${h.id}" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold">
+                                        <optgroup label="Pneumonia Module">
+                                            <option value="normal" ${h.result === 'normal' ? 'selected' : ''}>Normal (Pneumonia)</option>
+                                            <option value="pneumonia" ${h.result === 'pneumonia' ? 'selected' : ''}>Pneumonia Detected</option>
+                                        </optgroup>
+                                        <optgroup label="Stroke Module">
+                                            <option value="normal (stroke)" ${h.result === 'normal (stroke)' ? 'selected' : ''}>Normal (Stroke)</option>
+                                            <option value="high risk (stroke)" ${h.result === 'high risk (stroke)' ? 'selected' : ''}>High Risk (Stroke)</option>
+                                        </optgroup>
+                                    </select>` : '<p class="text-[10px] text-slate-400">AI chat: edit log notes only.</p>'}
+                                    <div class="flex gap-2">
+                                        <button onclick="saveClinicalNote(${h.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100">Update</button>
+                                        <button onclick="toggleEditMode(${h.id})" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        function startNewDiagnosis() {
+            const type = document.getElementById('diagnosis-type-select').value;
+            if (type === 'pneumonia') {
+                window.location.href = `pneumonia_prediction.html?patient_id=${currentEditingPatientId}`;
+            } else if (type === 'stroke') {
+                window.location.href = `stroke_prediction.html?patient_id=${currentEditingPatientId}`;
+            } else {
+                alert(`Expansion Pipeline: Module currently under calibration.`);
+            }
+        }
+
+        async function deleteRecord(hId, pId) {
+            if (!confirm('Delete this record? Linked AI reports will be removed from all sections.')) return;
+            try {
+                const res = await fetch(`/api/history/${hId}`, { method: 'DELETE' });
+                if (res.ok) openPatientModal(pId);
+            } catch (err) { console.error('Deletion failed:', err); }
+        }
+
+        function closeModal() { document.getElementById('patient-modal').classList.remove('open'); }
+        function toggleEditMode(id) { document.getElementById(`display-notes-${id}`).classList.toggle('hidden'); document.getElementById(`edit-area-${id}`).classList.toggle('hidden'); }
+
+        /* ── Report Preview (Clinical PDF-style modal) ── */
+        let _meCache = null;
+        async function getMe() {
+            if (_meCache) return _meCache;
+            try { const r = await fetch('/api/me',{credentials:'same-origin'}); _meCache = await r.json(); } catch(e){ _meCache = {}; }
+            return _meCache;
+        }
+
+        function rEsc(t) {
+            const d = document.createElement('div');
+            d.textContent = t == null ? '' : String(t);
+            return d.innerHTML;
+        }
+        function rResultClass(w) {
+            const lw = (w||'').toLowerCase();
+            if (['found','positive','abnormal','detected','high risk','pneumonia'].some(k=>lw.includes(k))) return 'found';
+            if (['normal','negative','clear','not found','no finding'].some(k=>lw.includes(k))) return 'clear';
+            return '';
+        }
+        function rTextHtml(text) {
+            if (!text) return '<p style="color:#cbd5e1;font-size:11px;">—</p>';
+            const lines = text.split('\n'); let out=''; let inUl=false;
+            for (const raw of lines) {
+                const ln = raw.replace(/\*\*/g,'').trim();
+                if (!ln) continue;
+                if (/^[-•*▸]\s/.test(ln)) {
+                    if (!inUl) { out += '<ul class="irpt-bullets">'; inUl=true; }
+                    out += `<li>${rEsc(ln.substring(2))}</li>`;
+                } else {
+                    if (inUl) { out += '</ul>'; inUl=false; }
+                    out += `<p style="margin:3px 0;font-size:11.5px;color:#374151;">${rEsc(ln)}</p>`;
+                }
+            }
+            if (inUl) out += '</ul>';
+            return out;
+        }
+        function rField(lbl, val, cls) {
+            return `<div class="irpt-field"><span class="irpt-fl">${rEsc(lbl)}</span><span class="irpt-fv ${cls||''}">${rEsc(val||'—')}</span></div>`;
+        }
+        function rCard(hdr, leftHtml, rightHtml) {
+            return `<div class="irpt-card"><div class="irpt-card-hdr"><span class="irpt-card-hdr-dot"></span>${hdr}</div><div class="irpt-row">${leftHtml}<div class="irpt-right">${rightHtml}</div></div></div>`;
+        }
+        function rBadge(color, lbl, val) {
+            const rc = rResultClass(val);
+            return `<div class="irpt-badge ${color}"><div class="blbl">${rEsc(lbl)}</div><div class="bval ${rc}">${rEsc(val||'—')}</div></div>`;
+        }
+        function rLeftScan(badgeColor, lbl, val, imgSrc, imgLbl) {
+            const imgHtml = imgSrc
+                ? `<img src="${rEsc(imgSrc)}" class="irpt-scan" alt="scan"><div class="irpt-scn-lbl">${rEsc(imgLbl||'AI Scan')}</div>`
+                : '<div class="irpt-noscn">No image<br>attached</div>';
+            return `<div class="irpt-left">${rBadge(badgeColor,lbl,val)}${imgHtml}</div>`;
+        }
+
+        function buildSimpleScanReport(h, p, me) {
+            const dName = me?.user?.full_name || 'Physician';
+            const dClinic = me?.user?.clinic_name || 'SehatAi Medical Center';
+            const visitDate = (h.created_at || '').split('T')[0] || h.created_at || '—';
+            const scanLabels = { pneumonia: 'Chest X-Ray', stroke: 'Stroke Risk Assessment', skin: 'Skin Lesion Analysis' };
+            const testName = scanLabels[h.diagnosis_type] || 'AI Diagnostic Scan';
+            const conf = h.confidence != null ? `${(Number(h.confidence) * 100).toFixed(1)}%` : '—';
+            const result = h.result || '—';
+            const imgSrc = h.chat_image_path ? `/api/uploads/chat-lab/${rEsc(h.chat_image_path)}` : '';
+
+            let adviceItems = ['Follow up with your doctor for clinical confirmation and treatment decisions.'];
+            if (h.diagnosis_type === 'pneumonia') {
+                adviceItems = result === 'pneumonia'
+                    ? ['Seek physician evaluation for confirmation and antibiotics if indicated.', 'Monitor breathing, fever, and cough closely.', 'Rest and stay hydrated; avoid smoking exposure.']
+                    : ['No pneumonia pattern detected on this scan.', 'Continue routine care; repeat imaging if symptoms persist.', 'Contact clinic if cough or fever develops.'];
+            } else if (h.diagnosis_type === 'stroke') {
+                const low = String(result).toLowerCase().includes('low') || String(result).toLowerCase().includes('normal');
+                adviceItems = low
+                    ? ['Maintain healthy blood pressure and lifestyle habits.', 'Annual check-ups recommended.', 'Seek care if sudden weakness, speech trouble, or facial drooping occurs.']
+                    : ['Schedule urgent physician review for stroke risk management.', 'Control blood pressure, diabetes, and cholesterol.', 'Know stroke warning signs — call emergency services if they appear.'];
+            } else if (h.diagnosis_type === 'skin') {
+                adviceItems = ['Dermatology review recommended for lesion confirmation.', 'Avoid scratching or irritating the area.', 'Use sun protection; return if size, color, or shape changes.'];
+            }
+
+            let html = '<div style="font-family:Inter,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#1e293b;">';
+            html += `<div style="border-bottom:2px solid #2563eb;padding-bottom:12px;margin-bottom:20px;">
+                <h2 style="font-size:18px;font-weight:800;margin:0;">AI Scan Report</h2>
+                <p style="font-size:11px;color:#64748b;margin:4px 0 0;">${rEsc(dClinic)} · Dr. ${rEsc(dName)} · ${rEsc(visitDate)}</p></div>`;
+            html += `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:18px;font-size:13px;line-height:1.7;">
+                <strong>Patient:</strong> ${rEsc(p.full_name || '—')} &nbsp;|&nbsp;
+                <strong>Age:</strong> ${rEsc(p.age || '—')} &nbsp;|&nbsp;
+                <strong>Gender:</strong> ${rEsc(p.gender || '—')} &nbsp;|&nbsp;
+                <strong>ID:</strong> ${rEsc(p.patient_id || '—')}</div>`;
+            if (imgSrc) {
+                html += `<div style="text-align:center;margin-bottom:18px;"><img src="${rEsc(imgSrc)}" style="max-height:180px;border-radius:8px;border:1px solid #cbd5e1;" alt="Scan"></div>`;
+            }
+            html += `<h3 style="font-size:13px;font-weight:800;color:#1e3a8a;margin:0 0 8px;text-transform:uppercase;">Basic Findings</h3>
+                <ul style="font-size:13px;line-height:1.7;padding-left:20px;margin:0 0 18px;">
+                <li>Scan: ${rEsc(testName)}</li>
+                <li>Result: <strong>${rEsc(result)}</strong></li>
+                <li>AI confidence: ${rEsc(conf)}</li>
+                ${h.doctor_notes ? `<li>Doctor notes: ${rEsc(h.doctor_notes)}</li>` : ''}
+                </ul>`;
+            html += `<h3 style="font-size:13px;font-weight:800;color:#1e3a8a;margin:0 0 8px;text-transform:uppercase;">Advice</h3>
+                <ul style="font-size:13px;line-height:1.7;padding-left:20px;margin:0;">
+                ${adviceItems.map(a => `<li>${rEsc(a)}</li>`).join('')}
+                </ul>`;
+            html += `<p style="font-size:10px;color:#94a3b8;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:10px;">AI-assisted scan by SehatAi. Clinical confirmation by a licensed physician is required.</p></div>`;
+            return html;
+        }
+
+        function buildInlineReport(h, p, me) {
+            const isScanOnly = ['pneumonia', 'stroke', 'skin'].includes(h.diagnosis_type);
+            if (isScanOnly) return buildSimpleScanReport(h, p, me);
+
+            const dName   = me?.user?.full_name      || 'Physician';
+            const dSpec   = me?.user?.specialization  || 'General Practitioner';
+            const dClinic = me?.user?.clinic_name     || 'SehatAi Medical Center';
+            const dPhone  = me?.user?.phone           || '';
+            const dEmail  = me?.user?.email           || '';
+            const dReg    = me?.user?.registration_no || '';
+
+            const pName   = p.full_name || '—';
+            const pAge    = p.age || '—';
+            const pGender = p.gender || '—';
+            const pMRN    = p.patient_id || '';
+            const visitDate = (h.created_at||'').split('T')[0] || h.created_at || '—';
+            const doctorNotes = h.doctor_notes || '';
+            const nextAppt = 'As advised by your doctor. Please contact the clinic to schedule.';
+
+            const isChat = h.diagnosis_type === 'ai_chat' || (h.chat_user_query && String(h.chat_user_query).trim());
+
+            let html = '<div class="irpt">';
+
+            /* ── HEADER (same for both types) ── */
+            html += `<div class="irpt-hdr">
+                <div class="irpt-hdr-l">
+                    <div class="irpt-hosp-name">⚕ ${rEsc(dClinic)}</div>
+                    <div class="irpt-hosp-tag">AI-Assisted Medical Facility</div>
+                    <div class="irpt-hosp-addr">${dPhone?'📞 '+rEsc(dPhone)+'&nbsp;&nbsp;':''}${dEmail?'✉ '+rEsc(dEmail):''}</div>
+                </div>
+                <div class="irpt-hdr-r">
+                    <div class="hl">Record ID</div><div class="hv">#${rEsc(String(h.id||'—'))}</div>
+                    <div class="hl" style="margin-top:7px;">Date</div><div class="hv">${rEsc(visitDate)}</div>
+                    ${dReg?`<div class="hl" style="margin-top:7px;">Reg. No.</div><div class="hv">${rEsc(dReg)}</div>`:''}
+                </div>
+            </div>`;
+
+            /* ── TITLE ── */
+            const reportTitle = isChat ? 'AI Consultation Report' : 'Diagnostic Report';
+            html += `<div class="irpt-title">
+                <h2>${reportTitle}</h2>
+                <span class="irpt-title-meta">Dr. ${rEsc(dName)} &nbsp;·&nbsp; ${rEsc(dSpec)}</span>
+            </div>`;
+
+            html += '<div class="irpt-body">';
+
+            /* ── COMPACT PATIENT INFO BAR (optional one-liner) ── */
+            html += `<div style="background:#f0f9ff;border:1px solid #bae6fd;border-left:3px solid #1d4ed8;border-radius:6px;padding:8px 14px;margin-bottom:14px;font-size:11.5px;color:#1e3a8a;line-height:1.6;">
+                <strong>Patient:</strong> ${rEsc(pName)}&nbsp;&nbsp;|&nbsp;&nbsp;<strong>Age:</strong> ${rEsc(String(pAge))}&nbsp;&nbsp;|&nbsp;&nbsp;<strong>Gender:</strong> ${rEsc(pGender)}&nbsp;&nbsp;|&nbsp;&nbsp;<strong>ID:</strong> ${rEsc(pMRN)}&nbsp;&nbsp;|&nbsp;&nbsp;<strong>Visit:</strong> ${rEsc(visitDate)}
+            </div>`;
+
+            if (isChat) {
+                /* ═══════════════════════════════════════════════════
+                   AI CHAT REPORT — parsed from exact prompt_template.py sections
+                   ═══════════════════════════════════════════════════ */
+                const rawAI   = h.chat_response   || h.ai_response   || '';
+                const rawUser = h.chat_user_query || h.user_query    || '';
+
+                /* ── extractSection: splits on **HEADER:** boundaries ── */
+                function extractSection(text, ...labels) {
+                    for (const lbl of labels) {
+                        // Match **LABEL:** or **LABEL:**\n content until next **HEADER:** or end
+                        const escaped = lbl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const re = new RegExp(
+                            `\\*{1,2}${escaped}:\\*{0,2}\\s*([\\s\\S]*?)(?=\\n\\*{1,2}[A-Z][A-Z\\s/()-]{2,}:\\*{0,2}|$)`,
+                            'i'
+                        );
+                        const m = text.match(re);
+                        if (m && m[1].trim()) return m[1].replace(/\*\*/g, '').trim();
+                    }
+                    return '';
+                }
+
+                /* Exact headers from prompt_template.py */
+                const caseDesc  = extractSection(rawAI, 'CASE DESCRIPTION', 'CASE SUMMARY');
+                const primDiag  = extractSection(rawAI, 'PRIMARY DIAGNOSIS', 'DIAGNOSIS');
+                const severity  = extractSection(rawAI, 'SEVERITY LEVEL', 'SEVERITY');
+                const treatment = extractSection(rawAI, 'GENERAL TREATMENT', 'TREATMENT PLAN', 'MANAGEMENT PLAN', 'MANAGEMENT');
+                const rxSection = extractSection(rawAI, 'RECOMMENDED MEDICATION', 'MEDICATIONS', 'PRESCRIPTIONS');
+                const otherDx   = extractSection(rawAI, 'OTHER PROBABLE DIAGNOSES', 'DIFFERENTIAL DIAGNOSES', 'DIFFERENTIAL DIAGNOSIS');
+                const disclaimer= extractSection(rawAI, 'MEDICAL DISCLAIMER', 'DISCLAIMER');
+
+                const parsedAny = primDiag || caseDesc || treatment || rxSection;
+
+                /* Severity badge colors */
+                const sevLow = severity.toLowerCase();
+                const sevBg = sevLow.includes('severe') || sevLow.includes('high') || sevLow.includes('critical')
+                    ? '#fef2f2' : sevLow.includes('moderate') || sevLow.includes('medium')
+                    ? '#fffbeb' : '#f0fdf4';
+                const sevBdr = sevLow.includes('severe') || sevLow.includes('high') || sevLow.includes('critical')
+                    ? '#fca5a5' : sevLow.includes('moderate') || sevLow.includes('medium')
+                    ? '#fcd34d' : '#86efac';
+                const sevTxt = sevLow.includes('severe') || sevLow.includes('high') || sevLow.includes('critical')
+                    ? '#991b1b' : sevLow.includes('moderate') || sevLow.includes('medium')
+                    ? '#92400e' : '#166534';
+
+                /* ── Patient Symptoms & Case Query ── */
+                if (rawUser) {
+                    html += `<div style="margin-bottom:18px;">
+                        <h3 style="font-size:13px;font-weight:800;color:#1e3a8a;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Patient Symptoms &amp; Case Query</h3>
+                        <div style="font-size:12px;color:#374151;background:#f8fafc;border-left:3px solid #3b82f6;padding:10px 14px;border-radius:0 8px 8px 0;line-height:1.6;white-space:pre-wrap;">${rEsc(rawUser)}</div>
+                    </div>`;
+                }
+
+                if (parsedAny) {
+                    /* ── Clinical Assessment & Diagnosis ── */
+                    html += `<div style="margin-bottom:18px;">
+                        <h3 style="font-size:13px;font-weight:800;color:#1e3a8a;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Clinical Assessment &amp; Diagnosis</h3>
+                        <div style="font-size:12px;color:#374151;line-height:1.6;">
+                            ${primDiag ? `<div style="margin-bottom:6px;"><strong>Diagnosis:</strong> <span style="font-size:13px;font-weight:700;color:#111827;">${rEsc(primDiag)}</span></div>` : ''}
+                            ${severity ? `<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+                                <strong>Severity:</strong>
+                                <span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;border:1.5px solid ${rEsc(sevBdr)};background:${rEsc(sevBg)};color:${rEsc(sevTxt)};">${rEsc(severity.toUpperCase())}</span>
+                            </div>` : ''}
+                            ${caseDesc ? `<div style="margin-top:8px;"><strong>Findings:</strong><div style="margin-top:2px;padding-left:2px;">${rTextHtml(caseDesc)}</div></div>` : ''}
+                            ${otherDx  ? `<div style="margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px;"><strong>Differential Diagnosis:</strong><div style="margin-top:2px;padding-left:2px;">${rTextHtml(otherDx)}</div></div>` : ''}
+                        </div>
+                    </div>`;
+
+                    /* ── Treatment Plan ── */
+                    if (treatment) {
+                        html += `<div style="margin-bottom:18px;">
+                            <h3 style="font-size:13px;font-weight:800;color:#1e3a8a;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Treatment Plan &amp; Advice</h3>
+                            <div style="font-size:12px;color:#374151;line-height:1.6;padding-left:2px;">${rTextHtml(treatment)}</div>
+                        </div>`;
+                    }
+
+                    /* ── Recommended Medications ── */
+                    html += `<div style="margin-bottom:18px;">
+                        <h3 style="font-size:13px;font-weight:800;color:#1e3a8a;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Recommended Medications</h3>
+                        <div style="font-size:12px;color:#374151;line-height:1.6;">
+                            ${rxSection ? rTextHtml(rxSection) : `<table class="irpt-med-table" style="width:100%;border-collapse:collapse;margin-top:4px;">
+                                <thead><tr style="background:#1e293b;color:#cbd5e1;font-size:8.5px;text-transform:uppercase;">
+                                    <th style="padding:6px 10px;text-align:left;">#</th>
+                                    <th style="padding:6px 10px;text-align:left;">Medicine</th>
+                                    <th style="padding:6px 10px;text-align:left;">Dosage</th>
+                                    <th style="padding:6px 10px;text-align:left;">Frequency</th>
+                                    <th style="padding:6px 10px;text-align:left;">Duration</th>
+                                </tr></thead>
+                                <tbody><tr><td colspan="5" style="text-align:center;color:#6b7280;font-style:italic;padding:12px;border:1px solid #e2e8f0;">See clinical assessment notes for detailed prescription.</td></tr></tbody>
+                            </table>`}
+                        </div>
+                    </div>`;
+
+                    if (disclaimer) {
+                        html += `<div style="margin:8px 0;padding:10px 14px;border-radius:8px;background:#fffbeb;border:1px solid #fde68a;font-size:10.5px;color:#92400e;line-height:1.5;">
+                            ⚠️ <strong>AI Consultation Disclaimer:</strong> ${rEsc(disclaimer)}
+                        </div>`;
+                    }
+                } else {
+                    /* ── Fallback: render full raw AI text cleanly ── */
+                    html += `<div style="margin-bottom:18px;">
+                        <h3 style="font-size:13px;font-weight:800;color:#1e3a8a;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Consultation Summary</h3>
+                        <div style="font-size:12px;color:#374151;line-height:1.6;padding-left:2px;">${rTextHtml(rawAI)}</div>
+                    </div>`;
+                }
+
+                /* Doctor Notes (if any) */
+                if (doctorNotes) {
+                    html += `<div style="margin-bottom:18px;border-top:1px dashed #e2e8f0;padding-top:10px;">
+                        <h4 style="font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:4px;">Doctor's Comments</h4>
+                        <div style="font-size:12px;color:#374151;font-style:italic;">${rEsc(doctorNotes)}</div>
+                    </div>`;
+                }
+
+            } else {
+                /* ═══════════════════════════════════════════════════
+                   SCAN / DIAGNOSIS REPORT (pneumonia / stroke / skin)
+                   ═══════════════════════════════════════════════════ */
+                const testName = h.diagnosis_type === 'pneumonia' ? 'Chest X-Ray'
+                               : h.diagnosis_type === 'stroke'    ? 'Stroke Risk'
+                               : 'AI Diagnostic Test';
+                const testResult = h.result || '—';
+                const imgSrc = h.chat_image_path ? `/api/uploads/chat-lab/${rEsc(h.chat_image_path)}` : '';
+                const conf = h.confidence != null ? `${(Number(h.confidence)*100).toFixed(1)}% confidence` : '';
+
+                /* ── Attached Scan Image ── */
+                if (imgSrc) {
+                    html += `<div style="margin-bottom:18px;text-align:center;">
+                        <img src="${rEsc(imgSrc)}" style="max-height:200px;border-radius:8px;border:1px solid #cbd5e1;" alt="Scan">
+                        <div style="font-size:10px;color:#94a3b8;font-weight:600;margin-top:4px;">${rEsc(testName)} Attached Image</div>
+                    </div>`;
+                }
+
+                /* ── Clinical Assessment & Diagnosis ── */
+                html += `<div style="margin-bottom:18px;">
+                    <h3 style="font-size:13px;font-weight:800;color:#1e3a8a;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Clinical Assessment &amp; Diagnosis</h3>
+                    <div style="font-size:12px;color:#374151;line-height:1.6;">
+                        <div style="margin-bottom:6px;"><strong>Diagnosis:</strong> <span style="font-size:13px;font-weight:700;color:#111827;">${rEsc(testResult)}</span></div>
+                        <div style="margin-bottom:6px;"><strong>Modality / Scan:</strong> ${rEsc(testName)}</div>
+                        ${conf ? `<div style="margin-bottom:6px;"><strong>AI Confidence:</strong> ${rEsc(conf)}</div>` : ''}
+                        ${doctorNotes ? `<div style="margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:8px;"><strong>Doctor's Notes:</strong><div style="font-style:italic;margin-top:2px;">${rEsc(doctorNotes)}</div></div>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            /* ── NEXT APPOINTMENT (both types) ── */
+            html += `<div class="irpt-appt">
+                <div class="irpt-appt-ico">📅</div>
+                <div class="irpt-appt-body">
+                    <strong>Next Appointment:</strong> ${rEsc(nextAppt)}
+                    <div class="irpt-appt-sub">If you need to reschedule, please contact our office using the details above.</div>
+                </div></div>`;
+
+            /* ── DOCTOR FOOTER (both types) ── */
+            html += `<div class="irpt-dr-row">
+                <div>
+                    <div class="irpt-dr-name">Dr. ${rEsc(dName)}</div>
+                    <div class="irpt-dr-spec">${rEsc(dSpec)}</div>
+                    <div class="irpt-dr-clinic">${rEsc(dClinic)}</div>
+                    <div class="irpt-dr-contact">${dPhone?'📞 '+rEsc(dPhone)+'<br>':''}${dEmail?'✉ '+rEsc(dEmail):''}</div>
+                    ${dReg?`<div class="irpt-dr-reg">Reg. No: ${rEsc(dReg)}</div>`:''}
+                </div>
+                <div class="irpt-sign-col">
+                    <div class="irpt-stamp">Official<br>Stamp</div>
+                    <div class="irpt-sign-line">Authorized Signatory</div>
+                    <div style="font-size:10.5px;font-weight:700;color:#374151;">Dr. ${rEsc(dName)}</div>
+                </div>
+            </div>`;
+
+            /* ── DISCLAIMER ── */
+            html += `<div class="irpt-disc">This document is a confidential medical record generated with AI assistance. For emergencies call <strong>1122</strong> (Rescue) or visit the nearest emergency department.</div>`;
+            html += `<div class="irpt-ai-note">⚡ AI-assisted report by SehatAi. Verified &amp; authorized by Dr. ${rEsc(dName)}.</div>`;
+
+            html += '</div></div>';
+            return html;
+        }
+
+        async function previewHistoryReport(h, p) {
+            if (h.diagnosis_type === 'ai_chat' && h.medical_report_id) {
+                window.open('medical_report_print.html?id=' + h.medical_report_id, '_blank');
+                return;
+            }
+            const me = await getMe();
+            const body = document.getElementById('rpt-preview-body');
+            document.getElementById('rpt-preview-title').textContent = `Report — ${p.full_name} | ${(h.created_at||'').split('T')[0]}`;
+            body.innerHTML = buildInlineReport(h, p, me);
+            document.getElementById('rpt-preview-modal').classList.add('open');
+        }
+
+        function closeReportPreview() {
+            document.getElementById('rpt-preview-modal').classList.remove('open');
+        }
+
+        function printReportPreview() {
+            const body = document.getElementById('rpt-preview-body').innerHTML;
+            const win = window.open('','_blank','width=800,height=900');
+            win.document.write(`<!DOCTYPE html><html><head><title>Medical Report</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif;}body{background:#fff;padding:20px;}</style></head><body>${body}</body></html>`);
+            win.document.close();
+            setTimeout(()=>win.print(),600);
+        }
+        async function saveClinicalNote(id) {
+            const dn = document.getElementById(`note-input-${id}`).value;
+            const sel = document.getElementById(`result-select-${id}`);
+            const payload = { doctor_notes: dn };
+            if (sel) payload.result = sel.value;
+            await fetch(`/api/history/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            openPatientModal(currentEditingPatientId);
+        }
+
+
+        function askAIChatbot() {
+            closeModal();
+            const iframe = document.getElementById('chat-iframe');
+            iframe.src = `chat_bot.html?auto_patient_id=${currentEditingPatientId}&skip_to_chat=1&t=` + Date.now();
+            chatIframeLoaded = true;
+            openChatDrawer();
+        }
+
+        function openChatDrawer() {
+            const drawer = document.getElementById('chat-drawer');
+            const iframe = document.getElementById('chat-iframe');
+            if (!chatIframeLoaded) {
+                iframe.src = 'chat_bot.html?t=' + Date.now();
+                chatIframeLoaded = true;
+            }
+            drawer.classList.add('open');
+            drawer.setAttribute('aria-hidden', 'false');
+        }
+        function closeChatDrawer() {
+            const drawer = document.getElementById('chat-drawer');
+            drawer.classList.remove('open');
+            drawer.setAttribute('aria-hidden', 'true');
+        }
+        function toggleChatDrawer() {
+            const drawer = document.getElementById('chat-drawer');
+            if (drawer.classList.contains('open')) closeChatDrawer();
+            else openChatDrawer();
+        }
+        function doLogout() { fetch('/api/logout', { method: 'POST' }).then(() => window.location.href = '/'); }
+
+        let searchTimeout;
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadHistory(e.target.value.trim()), 300);
+        });
+
+        loadHistory();
+    </script>
+</body>
+
+</html>
